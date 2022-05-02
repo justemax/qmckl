@@ -724,14 +724,201 @@ qmckl_compute_mo_basis_mo_vgl (const qmckl_context context,
                             const double* ao_vgl,
                             double* const mo_vgl )
 {
-#ifdef HAVE_HPC
-  return qmckl_compute_mo_basis_mo_vgl_hpc (context, ao_num, mo_num, point_num, coef_normalized_t, ao_vgl, mo_vgl);
+#ifdef HAVE_OPENMP_OFFLOAD
+  return qmckl_compute_mo_basis_mo_vgl_offload_openmp( context, ao_num, mo_num, point_num, coef_normalized_t, ao_vgl, mo_vgl);
+//#elseif HAVE_HPC
+//  return qmckl_compute_mo_basis_mo_vgl_hpc (context, ao_num, mo_num, point_num, coef_normalized_t, ao_vgl, mo_vgl);
 #else
   return qmckl_compute_mo_basis_mo_vgl_doc (context, ao_num, mo_num, point_num, coef_normalized_t, ao_vgl, mo_vgl);
 #endif
 }
     #+end_src
-    
+
+*** GPU version
+
+
+    #+begin_src c :tangle (eval h_func) :comments org
+#ifdef HAVE_OPENMP_OFFLOAD
+qmckl_exit_code
+qmckl_compute_mo_basis_mo_vgl_offload_openmp (const qmckl_context context,
+                                   const int64_t ao_num,
+                                   const int64_t mo_num,
+                                   const int64_t point_num,
+                                   const double* coef_normalized_t,
+                                   const double* ao_vgl,
+                                   double* const mo_vgl );
+#endif
+    #+end_src
+
+    #+begin_src c :tangle (eval c) :comments org
+#ifdef HAVE_OPENMP_OFFLOAD
+qmckl_exit_code
+qmckl_compute_mo_basis_mo_vgl_offload_openmp (const qmckl_context context,
+                                   const int64_t ao_num,
+                                   const int64_t mo_num,
+                                   const int64_t point_num,
+                                   const double* restrict coef_normalized_t,
+                                   const double* restrict ao_vgl,
+                                   double* restrict const mo_vgl )
+{
+
+    double* vgl1 ;// malloc(sizeof(mo_vgl));
+    double* avgl1 ;// malloc(sizeof(ao_vgl));
+    double* vgl2 ;// malloc(sizeof(vgl1) + (mo_num));
+    double* vgl3 ;// malloc(sizeof(vgl1) + (mo_num));
+    double* vgl4 ;// malloc(sizeof(vgl1) + (mo_num));
+    double* vgl5 ;// malloc(sizeof(vgl1) + (mo_num));
+    double* avgl2 ;// malloc(sizeof(avgl1) + (ao_vgl));
+    double* avgl3 ;// malloc(sizeof(avgl1) + (ao_vgl));
+    double* avgl4 ;// malloc(sizeof(avgl1) + (ao_vgl));
+    double* avgl5 ;// malloc(sizeof(avgl1) + (ao_vgl));
+
+    int64_t * idx = malloc(sizeof(int64_t)*ao_num);
+    double * av1 = malloc(sizeof(double)*ao_num);
+    double * av2 = malloc(sizeof(double)*ao_num);
+    double * av3 = malloc(sizeof(double)*ao_num);
+    double * av4 = malloc(sizeof(double)*ao_num);
+    double * av5 = malloc(sizeof(double)*ao_num);
+
+    double* ck1 ;// malloc(sizeof(coef_normalized_t)*ao_num*sizeof(idx));
+    double* ck2 ;// malloc(sizeof(coef_normalized_t)*ao_num*sizeof(idx));
+    double* ck3 ;// malloc(sizeof(coef_normalized_t)*ao_num*sizeof(idx));
+    double* ck4 ;// malloc(sizeof(coef_normalized_t)*ao_num*sizeof(idx));
+
+    double* ck ;// malloc(sizeof(coef_normalized_t) + sizeof(idx)*mo_num);
+
+
+
+  #pragma omp target enter data map(to:coef_normalized_t[0:ao_num*mo_num],\
+                                    ao_vgl[0:point_num*5*ao_num],\
+                                    mo_vgl[0:point_num*5*mo_num])\
+                                map(alloc:\
+                                    vgl1,\
+                                    avgl1,\
+                                    vgl2,\
+                                    vgl3,\
+                                    vgl4,\
+                                    vgl5,\
+                                    avgl2,\
+                                    avgl3,\
+                                    avgl4,\
+                                    avgl5,\
+                                    idx[0:ao_num],\
+                                    av1[0:ao_num],\
+                                    av2[0:ao_num],\
+                                    av3[0:ao_num],\
+                                    av4[0:ao_num],\
+                                    av5[0:ao_num],\
+                                    ck1,\
+                                    ck2,\
+                                    ck3,\
+                                    ck4,\
+                                    ck)
+
+  #pragma omp target teams
+  for (int64_t ipoint=0 ; ipoint < point_num ; ++ipoint) {
+    vgl1 = &(mo_vgl[ipoint*5*mo_num]);
+    avgl1 = &(ao_vgl[ipoint*5*ao_num]);
+    vgl2 =  vgl1 + mo_num;
+    vgl3 =  vgl1 + (mo_num << 1);
+    vgl4 =  vgl1 + (mo_num << 1) + mo_num;
+    vgl5 =  vgl1 + (mo_num << 2);
+    avgl2 = avgl1 + ao_num;
+    avgl3 = avgl1 + (ao_num << 1);
+    avgl4 = avgl1 + (ao_num << 1) + ao_num;
+    avgl5 = avgl1 + (ao_num << 2);
+
+    for (int64_t i=0 ; i<mo_num ; ++i) {
+      vgl1[i] = 0.;
+      vgl2[i] = 0.;
+      vgl3[i] = 0.;
+      vgl4[i] = 0.;
+      vgl5[i] = 0.;
+    }
+
+    int64_t nidx=0;
+
+    for (int64_t k=0 ; k<ao_num ; ++k) {
+      if (avgl1[k] != 0.) {
+        idx[nidx] = k;
+        av1[nidx] = avgl1[k];
+        av2[nidx] = avgl2[k];
+        av3[nidx] = avgl3[k];
+        av4[nidx] = avgl4[k];
+        av5[nidx] = avgl5[k];
+        ++nidx;
+      }
+    }
+
+    for (int64_t n=0 ; n < nidx-4 ; n+=4) {
+      ck1 = coef_normalized_t + idx[n  ]*mo_num;
+      ck2 = coef_normalized_t + idx[n+1]*mo_num;
+      ck3 = coef_normalized_t + idx[n+2]*mo_num;
+      ck4 = coef_normalized_t + idx[n+3]*mo_num;
+
+      double a11 = av1[n  ];
+      double a21 = av1[n+1];
+      double a31 = av1[n+2];
+      double a41 = av1[n+3];
+
+      double a12 = av2[n  ];
+      double a22 = av2[n+1];
+      double a32 = av2[n+2];
+      double a42 = av2[n+3];
+
+      double a13 = av3[n  ];
+      double a23 = av3[n+1];
+      double a33 = av3[n+2];
+      double a43 = av3[n+3];
+
+      double a14 = av4[n  ];
+      double a24 = av4[n+1];
+      double a34 = av4[n+2];
+      double a44 = av4[n+3];
+
+      double a15 = av5[n  ];
+      double a25 = av5[n+1];
+      double a35 = av5[n+2];
+      double a45 = av5[n+3];
+
+      for (int64_t i=0 ; i<mo_num ; ++i) {
+        vgl1[i] = vgl1[i] + ck1[i] * a11 + ck2[i] * a21 + ck3[i] * a31 + ck4[i] * a41;
+        vgl2[i] = vgl2[i] + ck1[i] * a12 + ck2[i] * a22 + ck3[i] * a32 + ck4[i] * a42;
+        vgl3[i] = vgl3[i] + ck1[i] * a13 + ck2[i] * a23 + ck3[i] * a33 + ck4[i] * a43;
+        vgl4[i] = vgl4[i] + ck1[i] * a14 + ck2[i] * a24 + ck3[i] * a34 + ck4[i] * a44;
+        vgl5[i] = vgl5[i] + ck1[i] * a15 + ck2[i] * a25 + ck3[i] * a35 + ck4[i] * a45;
+      }
+    }
+
+    int64_t n0 = nidx-4;
+    n0 = n0 < 0 ? 0 : n0;
+    for (int64_t m=n0 ; m < nidx ; m+=1) {
+      ck = coef_normalized_t + idx[m]*mo_num;
+      double a1 = av1[m];
+      double a2 = av2[m];
+      double a3 = av3[m];
+      double a4 = av4[m];
+      double a5 = av5[m];
+
+      for (int64_t i=0 ; i<mo_num ; ++i) {
+        vgl1[i] += ck[i] * a1;
+        vgl2[i] += ck[i] * a2;
+        vgl3[i] += ck[i] * a3;
+        vgl4[i] += ck[i] * a4;
+        vgl5[i] += ck[i] * a5;
+      }
+    }
+  }
+
+
+
+  #pragma omp target exit data map(from:mo_vgl[0:point_num*5*mo_num])
+  return QMCKL_SUCCESS;
+  }
+#endif
+    #+end_src
+
+   
     
 *** HPC version
     
