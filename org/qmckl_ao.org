@@ -317,7 +317,6 @@ typedef struct qmckl_ao_basis_struct {
 #+begin_src c :comments org :tangle (eval h_private_type) :noweb yes
 
 //Data structure used for
-#pragma omp declare target
 typedef struct sparse_matrix_data_2D{
 
   uint64_t nz; //number of non zero values
@@ -327,7 +326,6 @@ typedef struct sparse_matrix_data_2D{
   double * nz_vals; //Non zero matrix values
 
 }sparse_matrix_data_2D;
-#pragma omp end declare target
 #+end_src
 
 
@@ -6815,7 +6813,10 @@ qmckl_compute_ao_vgl_hpc_gaussian (
 
 
 *** OpenMP offload
+
+
 #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+/*
 #ifdef HAVE_OPENMP_OFFLOAD
 
 qmckl_exit_code
@@ -6838,6 +6839,7 @@ qmckl_compute_ao_vgl_gaussian_omp_offload (
                                            const qmckl_tensor coef_per_nucleus,
                                            double* restrict const ao_vgl )
 {
+  printf("AO GPU TIME \n");
   int32_t lstart_h[32];
   for (int32_t l=0 ; l<32 ; ++l) {
     lstart_h[l] = l*(l+1)*(l+2)/6;
@@ -6866,6 +6868,10 @@ qmckl_compute_ao_vgl_gaussian_omp_offload (
   ao_index[shell_num] = ao_num+1;
 
   /* Don't compute polynomials when the radial part is zero. */
+
+
+/*
+
   double cutoff = -log(1.e-12);
 
   qmckl_exit_code rc;
@@ -6873,29 +6879,53 @@ qmckl_compute_ao_vgl_gaussian_omp_offload (
   double * poly_vgl_shared = (double*) malloc(point_num * 5*size_max*sizeof(double));
 
 
-  //double * coef_mat = (double*) malloc(nucl_num*shell_max*prim_max*sizeof(double));
-  sparse_matrix_data_2D * coef_mat = malloc(sizeof(sparse_matrix_data_2D) * nucl_num);
-  	
-  for(int i =0; i<nucl_num;i++){
-    coef_mat[i].nz = 0;
-    coef_mat[i].i_index = malloc(sizeof(uint64_t)*shell_max);
-    coef_mat[i].j_index = malloc(sizeof(uint64_t)*prim_max);
-    coef_mat[i].nz_vals = malloc(sizeof(double)*shell_max*prim_max);
-  }
+  //Array to represent a struct
+  uint64_t nz_max = shell_max * prim_max;
+/*
+
+  uint64_t * row_index = malloc(sizeof(uint64_t) * nucl_num * shell_max * nz_max);
+  uint64_t * col_index = malloc(sizeof(uint64_t) * nucl_num * prim_max * nz_max);
+  double * nz_vals = malloc(sizeof(double) * nucl_num * nz_max);
+,*/
+
+
+    /*
+  uint64_t * nz = malloc(sizeof(uint64_t) * nucl_num);
+  double * nz_vals = malloc(sizeof(double) * nucl_num * nz_max);
+  uint64_t * nz_per_row = malloc(sizeof(uint64_t) * nucl_num * shell_max);
+  uint64_t * nz_col_index = malloc(sizeof(uint64_t) * nucl_num * nz_max);
+
+
   double data;
+  int total =0;
   for (int i=0 ; i<nucl_num ; ++i) {
+    total =0;
+    nz[i] = 0;
     for (int j=0 ; j<shell_max; ++j) {
+      nz_per_row[i * shell_max + j] = 0 ;
       for (int k=0 ; k<prim_max; ++k) {
         data = qmckl_ten3(coef_per_nucleus,k, j, i);
+        total ++;
         if(data != 0){
-          coef_mat[i].i_index[coef_mat[i].nz] = j;
-          coef_mat[i].j_index[coef_mat[i].nz] = k;
-          coef_mat[i].nz_vals[coef_mat[i].nz] = data;
-          coef_mat[i].nz++;
-          //coef_mat[i*shell_max*prim_max + j*prim_max + k] = qmckl_ten3(coef_per_nucleus,k, j, i);
+
+          nz_vals[i * nz_max + nz[i]]= data;
+          nz_per_row[i * shell_max + j] ++ ;
+          nz_col_index[i * nz_max + k] = k;
+          nz[i]  = nz[i] + 1;
+
+          /*
+          row_index[i * shell_max + nz[i]] = j;
+          col_index[i * prim_max + nz[i]] = k;
+          nz_vals[i * shell_max * prim_max + nz[i]] = data;
+,*/
+
+
+    /*
+
         }
       }
     }
+    printf("total = %d, nz=%d\n", total, nz[i]);
   }
 
   // WARNING This probably breaks the restrict on expo_per_nucleus.data
@@ -6918,8 +6948,11 @@ qmckl_compute_ao_vgl_gaussian_omp_offload (
          shell_ang_mom[0:shell_num],               \
          ao_factor[0:ao_num],                      \
          expo_per_nucleus_data[0:expo_per_nucleus_size_0*expo_per_nucleus_size_1], \
-         coef_mat,\
-         ao_index[0:shell_num+1]\
+         ao_index[0:shell_num+1],\
+         nz[0:nucl_num],\
+         nz_per_row[0:nucl_num * shell_max],\
+         nz_col_index[0:nucl_num * nz_max],\
+         nz_vals[0:nucl_num * nz_max]\
   )\
   map(alloc:ao_vgl[0:point_num*5*ao_num],\
             poly_vgl_shared[0:point_num*5*size_max],\
@@ -6956,12 +6989,40 @@ qmckl_compute_ao_vgl_gaussian_omp_offload (
                                   coord[ipoint + point_num],
                                   coord[ipoint + 2*point_num] };
 
+
+      for(int64_t inucl = 0; inucl < nucl_num; inucl ++){
+        for (int64_t ishell = ishell_start ; ishell < ishell_end ; ++ishell) { //i
+          for(int i=0; i < 5; i++){
+            ce_mat_shared[inucl * shell_max * 8 + ishell * 8 + 0] = 0.;
+          }
+
+
+
+          for (int k=0 ; k<nidx; ++k) {
+            exp_mat_shared[inucl * prim_max * 8 + k * 8 + 0] = exp(-(expo_per_nucleus_data[base_idx + k] * r2));
+            double f = expo_per_nucleus_data[base_idx + k] * exp_mat_shared[inucl * prim_max * 8 + k * 8 + 0];
+            f = -f-f;
+            exp_mat_shared[inucl * prim_max * 8 + k * 8 + 1] = f * x;
+            exp_mat_shared[inucl * prim_max * 8 + k * 8 + 2] = f * y;
+            exp_mat_shared[inucl * prim_max * 8 + k * 8 + 3]= f * z;
+            exp_mat_shared[inucl * prim_max * 8 + k * 8 + 4]= f * (3.0 - 2.0 * (expo_per_nucleus_data[base_idx + k] * r2));
+
+
+      }
+
+
+
+
       for (int64_t inucl=0 ; inucl < nucl_num ; ++inucl) {
         const double n_coord[3] = { nucl_coord[inucl],
                                     nucl_coord[inucl + nucl_num],
                                     nucl_coord[inucl + 2*nucl_num] };
 
         /* Test if the point is in the range of the nucleus */
+
+    /*
+
+
         const double x = e_coord[0] - n_coord[0];
         const double y = e_coord[1] - n_coord[1];
         const double z = e_coord[2] - n_coord[2];
@@ -7015,6 +7076,7 @@ qmckl_compute_ao_vgl_gaussian_omp_offload (
         }
 
         /* Compute all exponents */
+/*
 
         int64_t nidx = 0;
         int base_idx  = inucl * expo_per_nucleus_size_0;
@@ -7032,7 +7094,9 @@ qmckl_compute_ao_vgl_gaussian_omp_offload (
 
 
 
-        for (int64_t ishell = ishell_start ; ishell < ishell_end ; ++ishell) {
+        uint64_t offset = 0;
+        for (int64_t ishell = ishell_start ; ishell < ishell_end ; ++ishell) { //i
+          uint64_t k_max = nz_per_row[inucl * shell_max + ishell];
           ce_mat_shared[inucl * shell_max * 8 + ishell * 8 + 0] = 0.;
           ce_mat_shared[inucl * shell_max * 8 + ishell * 8 + 1] = 0.;
           ce_mat_shared[inucl * shell_max * 8 + ishell * 8 + 2] = 0.;
@@ -7049,14 +7113,17 @@ qmckl_compute_ao_vgl_gaussian_omp_offload (
             exp_mat_shared[inucl * prim_max * 8 + k * 8 + 4]= f * (3.0 - 2.0 * (expo_per_nucleus_data[base_idx + k] * r2));
 
             //for loop on nz value
-            for(int64_t b; b < coef_mat[inucl].nz; b++){
-              ce_mat_shared[inucl * shell_max * 8 + ishell * 8 + coef_mat[inucl].i_index[b]] +=  coef_mat[inucl].nz_vals[b] * exp_mat_shared[inucl * prim_max * 8 + k * 8 + b];
-              /*
-              ce_mat_shared[inucl * shell_max * 8 + ishell * 8 + 1] += coef_mat[inucl*shell_max*prim_max + (ishell-ishell_start)*prim_max + k] * exp_mat_shared[inucl * prim_max * 8 + k * 8 + 1];
-              ce_mat_shared[inucl * shell_max * 8 + ishell * 8 + 2] += coef_mat[inucl*shell_max*prim_max + (ishell-ishell_start)*prim_max + k] * exp_mat_shared[inucl * prim_max * 8 + k * 8 + 2];
-              ce_mat_shared[inucl * shell_max * 8 + ishell * 8 + 3] += coef_mat[inucl*shell_max*prim_max + (ishell-ishell_start)*prim_max + k] * exp_mat_shared[inucl * prim_max * 8 + k * 8 + 3];
-              ce_mat_shared[inucl * shell_max * 8 + ishell * 8 + 4] += coef_mat[inucl*shell_max*prim_max + (ishell-ishell_start)*prim_max + k] * exp_mat_shared[inucl * prim_max * 8 + k * 8 + 4];
-              ,*/
+            for (uint64_t j = 0; j < k_max; ++j){
+           //   ce_mat_shared[inucl * shell_max * 8 + col_index[inucl * shell_max + b]* 8 + row_index[inucl * shell_max + b]] +=  nz_vals[inucl * shell_max * prim_max + b] * exp_mat_shared[inucl * prim_max * 8 + b * 8 + row_index[inucl * shell_max + b]];
+
+
+              ce_mat_shared[inucl * shell_max * 8 + ishell * 8 + j] += nz_vals[inucl * shell_max * prim_max + j+offset] * exp_mat_shared[inucl * prim_max * 8 + k * 8 + nz_col_index[inucl * shell_max * prim_max + j]];
+
+
+             // ce_mat_shared[inucl * shell_max * 8 + b * 8 + row_index[inucl * shell_max + 1]] +=  nz_vals[inucl * shell_max * prim_max + b] * exp_mat_shared[inucl * prim_max * 8 + b * 8 + 1];
+              //ce_mat_shared[inucl * shell_max * 8 + b * 8 + row_index[inucl * shell_max + 2]] +=  nz_vals[inucl * shell_max * prim_max + b] * exp_mat_shared[inucl * prim_max * 8 + b * 8 + 2];
+              //ce_mat_shared[inucl * shell_max * 8 + b * 8 + row_index[inucl * shell_max + 3]] +=  nz_vals[inucl * shell_max * prim_max + b] * exp_mat_shared[inucl * prim_max * 8 + b * 8 + 3];
+              //ce_mat_shared[inucl * shell_max * 8 + b * 8 + row_index[inucl * shell_max + 4]] +=  nz_vals[inucl * shell_max * prim_max + b] * exp_mat_shared[inucl * prim_max * 8 + b * 8 + 4];
             }
           }
 
@@ -7171,22 +7238,387 @@ qmckl_compute_ao_vgl_gaussian_omp_offload (
   }
 
   free(ao_index);
-  free(coef_mat);
   free(poly_vgl_shared);
 
   //Free sparse matrix
 
-  for(int i; i<nucl_num ; i++){
-    free(coef_mat[i].i_index);
-    free(coef_mat[i].j_index);
-    free(coef_mat[i].nz_vals);
+
+    free(nz);
+    free(nz_per_row);
+    free(nz_col_index);
+    free(nz_vals);
+
+
+
+  return QMCKL_SUCCESS;
+}
+#endif
+    ,*/
+
+#+end_src
+
+
+#+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+#ifdef HAVE_OPENMP_OFFLOAD
+
+qmckl_exit_code
+qmckl_compute_ao_vgl_gaussian_omp_offload (
+                                           const qmckl_context context,
+                                           const int64_t ao_num,
+                                           const int64_t shell_num,
+                                           const int32_t* restrict prim_num_per_nucleus,
+                                           const int64_t point_num,
+                                           const int64_t nucl_num,
+                                           const double* restrict coord,
+                                           const double* restrict nucl_coord,
+                                           const int64_t* restrict nucleus_index,
+                                           const int64_t* restrict nucleus_shell_num,
+                                           const double* nucleus_range,
+                                           const int32_t* restrict nucleus_max_ang_mom,
+                                           const int32_t* restrict shell_ang_mom,
+                                           const double* restrict ao_factor,
+                                           const qmckl_matrix expo_per_nucleus,
+                                           const qmckl_tensor coef_per_nucleus,
+                                           double* restrict const ao_vgl )
+{
+  int32_t lstart_h[32];
+  for (int32_t l=0 ; l<32 ; ++l) {
+    lstart_h[l] = l*(l+1)*(l+2)/6;
   }
+
+  int64_t * ao_index = malloc((shell_num+1) * sizeof(int64_t));
+
+  int64_t size_max = 0;
+  int64_t prim_max = 0;
+  int64_t shell_max = 0;
+  int64_t k=0;
+  for (int inucl=0 ; inucl < nucl_num ; ++inucl) {
+    prim_max = prim_num_per_nucleus[inucl] > prim_max ?
+      prim_num_per_nucleus[inucl] : prim_max;
+    shell_max = nucleus_shell_num[inucl] > shell_max ?
+      nucleus_shell_num[inucl] : shell_max;
+    const int64_t ishell_start = nucleus_index[inucl];
+    const int64_t ishell_end   = nucleus_index[inucl] + nucleus_shell_num[inucl];
+    for (int64_t ishell = ishell_start ; ishell < ishell_end ; ++ishell) {
+      const int l = shell_ang_mom[ishell];
+      ao_index[ishell] = k;
+      k += lstart_h[l+1] - lstart_h[l];
+      size_max = size_max < lstart_h[l+1] ? lstart_h[l+1] : size_max;
+    }
+  }
+  ao_index[shell_num] = ao_num+1;
+
+  /* Don't compute polynomials when the radial part is zero. */
+  double cutoff = -log(1.e-12);
+
+  qmckl_exit_code rc;
+
+   // WARNING We're using hardcoded values for now
+  int num_teams = 32;
+  int num_threads = 32;
+  double * poly_vgl_shared = (double*) malloc(num_teams*num_threads * 5*size_max*sizeof(double));
+  double  poly_vgl[5][size_max];
+
+
+  double * coef_mat = (double*) malloc(nucl_num*shell_max*prim_max*sizeof(double));
+  for (int i=0 ; i<nucl_num ; ++i) {
+    for (int j=0 ; j<shell_max; ++j) {
+      for (int k=0 ; k<prim_max; ++k) {
+        coef_mat[i*shell_max*prim_max + j*prim_max + k] = qmckl_ten3(coef_per_nucleus,k, j, i);
+      }
+    }
+  }
+
+  // WARNING This probably breaks the restrict on expo_per_nucleus.data
+  double * expo_per_nucleus_data = expo_per_nucleus.data;
+  int expo_per_nucleus_size_0 = expo_per_nucleus.size[0];
+  int expo_per_nucleus_size_1 = expo_per_nucleus.size[1];
+
+  #pragma omp target enter data \
+  map(to:prim_num_per_nucleus[0:nucl_num],         \
+         coord[0:3*point_num],                     \
+         nucl_coord[0:3*nucl_num],                 \
+         nucleus_index[0:nucl_num],                \
+         nucleus_shell_num[0:nucl_num],            \
+         nucleus_range[0:nucl_num],                \
+         nucleus_max_ang_mom[0:nucl_num],          \
+         shell_ang_mom[0:shell_num],               \
+         ao_factor[0:ao_num],                      \
+         expo_per_nucleus_data[0:expo_per_nucleus_size_0*expo_per_nucleus_size_1], \
+         coef_mat[0:nucl_num*shell_max*prim_max],\
+         ao_index[0:shell_num+1]\
+  )\
+  map(alloc:ao_vgl[0:point_num*5*ao_num],\
+            poly_vgl_shared[0:num_teams*num_threads*5*size_max]\
+  )
+  {
+
+
+    #pragma omp target teams num_teams(num_teams) thread_limit(num_threads) distribute parallel for simd
+    for (int64_t ipoint=0 ; ipoint < point_num ; ++ipoint) {
+      int thread_num = omp_get_thread_num();
+      int team_num = omp_get_team_num();
+
+      double * poly_vgl = &(poly_vgl_shared[team_num*num_threads*5*size_max + thread_num*5*size_max]);
+
+     int32_t lstart[32];
+     for (int32_t l=0 ; l<32 ; ++l) {
+       lstart[l] = l*(l+1)*(l+2)/6;
+     }
+     double  poly_vgl_l1[4][4] = {{1.0, 0.0, 0.0, 0.0},
+                                  {0.0, 1.0, 0.0, 0.0},
+                                  {0.0, 0.0, 1.0, 0.0},
+                                  {0.0, 0.0, 0.0, 1.0}};
+     double  poly_vgl_l2[5][10] = {{1., 0., 0., 0., 0., 0., 0., 0., 0., 0.},
+                                   {0., 1., 0., 0., 0., 0., 0., 0., 0., 0.},
+                                   {0., 0., 1., 0., 0., 0., 0., 0., 0., 0.},
+                                   {0., 0., 0., 1., 0., 0., 0., 0., 0., 0.},
+                                   {0., 0., 0., 0., 2., 0., 0., 2., 0., 2.}};
+
+
+      const double e_coord[3] = { coord[ipoint],
+                                  coord[ipoint + point_num],
+                                  coord[ipoint + 2*point_num] };
+
+
+      for(int64_t inucl = 0; inucl < nucl_num; inucl ++){
+
+
+      }
+
+
+
+      #pragma omp parallel
+      for (int64_t inucl=0 ; inucl < nucl_num ; ++inucl) {
+        const double n_coord[3] = { nucl_coord[inucl],
+                                    nucl_coord[inucl + nucl_num],
+                                    nucl_coord[inucl + 2*nucl_num] };
+
+        /* Test if the point is in the range of the nucleus */
+        const double x = e_coord[0] - n_coord[0];
+        const double y = e_coord[1] - n_coord[1];
+        const double z = e_coord[2] - n_coord[2];
+
+        const double r2 = x*x + y*y + z*z;
+
+        if (r2 > cutoff * nucleus_range[inucl]) {
+          continue;
+        }
+
+        int64_t n_poly;
+        switch (nucleus_max_ang_mom[inucl]) {
+        case 0:
+          break;
+
+        case 1:
+          poly_vgl_l1[0][1] = x;
+          poly_vgl_l1[0][2] = y;
+          poly_vgl_l1[0][3] = z;
+          break;
+
+        case 2:
+          poly_vgl_l2[0][1] = x;
+          poly_vgl_l2[0][2] = y;
+          poly_vgl_l2[0][3] = z;
+          poly_vgl_l2[0][4] = x*x;
+          poly_vgl_l2[0][5] = x*y;
+          poly_vgl_l2[0][6] = x*z;
+          poly_vgl_l2[0][7] = y*y;
+          poly_vgl_l2[0][8] = y*z;
+          poly_vgl_l2[0][9] = z*z;
+          poly_vgl_l2[1][4] = x+x;
+          poly_vgl_l2[1][5] = y;
+          poly_vgl_l2[1][6] = z;
+          poly_vgl_l2[2][5] = x;
+          poly_vgl_l2[2][7] = y+y;
+          poly_vgl_l2[2][8] = z;
+          poly_vgl_l2[3][6] = x;
+          poly_vgl_l2[3][8] = y;
+          poly_vgl_l2[3][9] = z+z;
+          break;
+
+        default:
+          rc = qmckl_ao_polynomial_transp_vgl_hpc_omp_offload(context, e_coord, n_coord,
+                                                  nucleus_max_ang_mom[inucl],
+                                                  &n_poly, (int64_t) 3,
+                                                  poly_vgl, size_max);
+
+          assert (rc == QMCKL_SUCCESS);
+          break;
+        }
+
+        /* Compute all exponents */
+
+        int64_t nidx = 0;
+        int base_idx  = inucl * expo_per_nucleus_size_0;
+        for (int64_t iprim = 0 ; iprim < prim_num_per_nucleus[inucl] ; ++iprim) {
+          const double v = expo_per_nucleus_data[base_idx + iprim] * r2;
+          if (v <= cutoff) {
+            ++nidx;
+          } else {
+            break;
+          }
+        }
+
+        const int64_t ishell_start = nucleus_index[inucl];
+        const int64_t ishell_end   = nucleus_index[inucl] + nucleus_shell_num[inucl];
+
+        double ce_mat_0 = 0.;
+        double ce_mat_1 = 0.;
+        double ce_mat_2 = 0.;
+        double ce_mat_3 = 0.;
+        double ce_mat_4 = 0.;
+
+        double exp_mat_0 = 0.;
+        double exp_mat_1 = 0.;
+        double exp_mat_2 = 0.;
+        double exp_mat_3 = 0.;
+        double exp_mat_4 = 0.;
+
+        for (int64_t ishell = ishell_start ; ishell < ishell_end ; ++ishell) {
+          ce_mat_0 = 0.;
+          ce_mat_1 = 0.;
+          ce_mat_2 = 0.;
+          ce_mat_3 = 0.;
+          ce_mat_4 = 0.;
+
+          for (int k=0 ; k<nidx; ++k) {
+            exp_mat_0 = exp(-(expo_per_nucleus_data[base_idx + k] * r2));
+            double f = expo_per_nucleus_data[base_idx + k] * exp_mat_0;
+            f = -f-f;
+            exp_mat_1 = f * x;
+            exp_mat_2 = f * y;
+            exp_mat_3 = f * z;
+            exp_mat_4 = f * (3.0 - 2.0 * (expo_per_nucleus_data[base_idx + k] * r2));
+            if (coef_mat[inucl*shell_max*prim_max + (ishell-ishell_start)*prim_max + k] != 0.) {
+              ce_mat_0 += coef_mat[inucl*shell_max*prim_max + (ishell-ishell_start)*prim_max + k] * exp_mat_0;
+              ce_mat_1 += coef_mat[inucl*shell_max*prim_max + (ishell-ishell_start)*prim_max + k] * exp_mat_1;
+              ce_mat_2 += coef_mat[inucl*shell_max*prim_max + (ishell-ishell_start)*prim_max + k] * exp_mat_2;
+              ce_mat_3 += coef_mat[inucl*shell_max*prim_max + (ishell-ishell_start)*prim_max + k] * exp_mat_3;
+              ce_mat_4 += coef_mat[inucl*shell_max*prim_max + (ishell-ishell_start)*prim_max + k] * exp_mat_4;
+            }
+          }
+
+          const double s1 = ce_mat_0;
+          if (s1 == 0.0) continue;
+          const double s2 = ce_mat_1;
+          const double s3 = ce_mat_2;
+          const double s4 = ce_mat_3;
+          const double s5 = ce_mat_4;
+
+          const int64_t k = ao_index[ishell];
+          double* restrict const ao_vgl_1 = ao_vgl + ipoint*5*ao_num + k;
+
+          const int32_t l = shell_ang_mom[ishell];
+          const int32_t n = lstart[l+1]-lstart[l];
+
+          double* restrict const ao_vgl_2 = ao_vgl_1 + ao_num;
+          double* restrict const ao_vgl_3 = ao_vgl_1 + (ao_num<<1);
+          double* restrict const ao_vgl_4 = ao_vgl_1 + (ao_num<<1) + ao_num;
+          double* restrict const ao_vgl_5 = ao_vgl_1 + (ao_num<<2);
+
+          double* restrict poly_vgl_1 = NULL;
+          double* restrict poly_vgl_2 = NULL;
+          double* restrict poly_vgl_3 = NULL;
+          double* restrict poly_vgl_4 = NULL;
+          double* restrict poly_vgl_5 = NULL;
+          if (nidx > 0) {
+            const double* restrict f = ao_factor + k;
+            const int64_t idx = lstart[l];
+
+            switch (nucleus_max_ang_mom[inucl]) {
+            case 0:
+              break;
+            case 1:
+              poly_vgl_1 = &(poly_vgl_l1[0][idx]);
+              poly_vgl_2 = &(poly_vgl_l1[1][idx]);
+              poly_vgl_3 = &(poly_vgl_l1[2][idx]);
+              poly_vgl_4 = &(poly_vgl_l1[3][idx]);
+              break;
+            case 2:
+              poly_vgl_1 = &(poly_vgl_l2[0][idx]);
+              poly_vgl_2 = &(poly_vgl_l2[1][idx]);
+              poly_vgl_3 = &(poly_vgl_l2[2][idx]);
+              poly_vgl_4 = &(poly_vgl_l2[3][idx]);
+              poly_vgl_5 = &(poly_vgl_l2[4][idx]);
+              break;
+            default:
+              poly_vgl_1 = &(poly_vgl[idx]);
+              poly_vgl_2 = &(poly_vgl[size_max + idx]);
+              poly_vgl_3 = &(poly_vgl[2 * size_max + idx]);
+              poly_vgl_4 = &(poly_vgl[3 * size_max + idx]);
+              poly_vgl_5 = &(poly_vgl[4 * size_max + idx]);
+            }
+            switch (n) {
+            case(1):
+              ao_vgl_1[0] = s1 * f[0];
+              ao_vgl_2[0] = s2 * f[0];
+              ao_vgl_3[0] = s3 * f[0];
+              ao_vgl_4[0] = s4 * f[0];
+              ao_vgl_5[0] = s5;
+              break;
+            case (3):
+              for (int il=0 ; il<3 ; ++il) {
+                ao_vgl_1[il] =  poly_vgl_1[il] * s1 * f[il];
+                ao_vgl_2[il] = (poly_vgl_2[il] * s1 + poly_vgl_1[il] * s2) * f[il];
+                ao_vgl_3[il] = (poly_vgl_3[il] * s1 + poly_vgl_1[il] * s3) * f[il];
+                ao_vgl_4[il] = (poly_vgl_4[il] * s1 + poly_vgl_1[il] * s4) * f[il];
+                ao_vgl_5[il] = (poly_vgl_1[il] * s5 +
+                                2.0*(poly_vgl_2[il] * s2 +
+                                     poly_vgl_3[il] * s3 +
+                                     poly_vgl_4[il] * s4 )) * f[il];
+              }
+              break;
+            case(6):
+              for (int il=0 ; il<6 ; ++il) {
+                ao_vgl_1[il] =  poly_vgl_1[il] * s1 * f[il];
+                ao_vgl_2[il] = (poly_vgl_2[il] * s1 + poly_vgl_1[il] * s2) * f[il];
+                ao_vgl_3[il] = (poly_vgl_3[il] * s1 + poly_vgl_1[il] * s3) * f[il];
+                ao_vgl_4[il] = (poly_vgl_4[il] * s1 + poly_vgl_1[il] * s4) * f[il];
+                ao_vgl_5[il] = (poly_vgl_5[il] * s1 + poly_vgl_1[il] * s5 +
+                                2.0*(poly_vgl_2[il] * s2 +
+                                     poly_vgl_3[il] * s3 +
+                                     poly_vgl_4[il] * s4 )) * f[il];
+              }
+              break;
+            default:
+              for (int il=0 ; il<n ; ++il) {
+                ao_vgl_1[il] =  poly_vgl_1[il] * s1 * f[il];
+                ao_vgl_2[il] = (poly_vgl_2[il] * s1 + poly_vgl_1[il] * s2) * f[il];
+                ao_vgl_3[il] = (poly_vgl_3[il] * s1 + poly_vgl_1[il] * s3) * f[il];
+                ao_vgl_4[il] = (poly_vgl_4[il] * s1 + poly_vgl_1[il] * s4) * f[il];
+                ao_vgl_5[il] = (poly_vgl_5[il] * s1 + poly_vgl_1[il] * s5 +
+                                2.0*(poly_vgl_2[il] * s2 +
+                                     poly_vgl_3[il] * s3 +
+                                     poly_vgl_4[il] * s4 )) * f[il];
+              }
+              break;
+            }
+          } else {
+            for (int64_t il=0 ; il<n ; ++il) {
+              ao_vgl_1[il] = 0.0;
+              ao_vgl_2[il] = 0.0;
+              ao_vgl_3[il] = 0.0;
+              ao_vgl_4[il] = 0.0;
+              ao_vgl_5[il] = 0.0;
+            }
+          }
+        }
+      }
+    }
+    #pragma omp target update from(ao_vgl[0:point_num*5*ao_num])
+  }
+
+  free(ao_index);
   free(coef_mat);
+  free(poly_vgl_shared);
 
   return QMCKL_SUCCESS;
 }
 #endif
 #+end_src
+
+
 
 
 
