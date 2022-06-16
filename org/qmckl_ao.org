@@ -6937,6 +6937,9 @@ qmckl_compute_ao_vgl_gaussian_omp_offload (
   double * ce_mat_shared = malloc(sizeof(double) * nucl_num * shell_max * 8);
   double * exp_mat_shared = malloc(sizeof(double) * nucl_num * prim_max * 8);
 
+  //Passer un poiteur vers la structure puis vers ce que je veux dans la struct
+  //Pour gagner en perf NV_OMP_TIME = 1
+  // -gpu=manage en plus poiur la compil -mp=multicore
   #pragma omp target enter data \
   map(to:prim_num_per_nucleus[0:nucl_num],         \
          coord[0:3*point_num],                     \
