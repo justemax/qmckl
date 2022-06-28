@@ -118,7 +118,6 @@ int main() {
 #include "qmckl_jastrow_private_type.h"
 
 #ifdef HAVE_CUBLAS_OFFLOAD
-#include <cuda_runtime_api.h>
 #include "cublas_v2.h"
 #endif
 
@@ -1076,6 +1075,323 @@ qmckl_set_jastrow_cord_vector(qmckl_context context,
 
    #+end_src
 
+**** Device pointer
+
+#+begin_src c :comments org :tangle (eval h_func)
+#ifdef HAVE_DEVICE_POINTERS
+
+qmckl_exit_code  qmckl_set_jastrow_type_nucl_vector_device  (qmckl_context context, const int64_t* type_nucl_vector, const int64_t nucl_num, int device_id);
+qmckl_exit_code  qmckl_set_jastrow_aord_vector_device       (qmckl_context context, const double * aord_vector, const int64_t size_max, int device_id);
+qmckl_exit_code  qmckl_set_jastrow_bord_vector_device       (qmckl_context context, const double * bord_vector, const int64_t size_max, int device_id);
+qmckl_exit_code  qmckl_set_jastrow_cord_vector_device       (qmckl_context context, const double * cord_vector, const int64_t size_max, int device_id);
+#endif
+   #+end_src
+
+
+
+   #+begin_src c :comments org :tangle (eval c) :noweb yes :exports none
+#ifdef HAVE_DEVICE_POINTERS
+
+qmckl_exit_code
+qmckl_set_jastrow_type_nucl_vector_device(qmckl_context context,
+                                   const int64_t * type_nucl_vector,
+                                   const int64_t nucl_num,
+                                          int device_id)
+{
+<<pre2>>
+
+  #pragma omp target is_device_ptr(type_nucl_vector)
+  {
+  printf("type_nucl_vect adr %p, type nuc first = %d\n", type_nucl_vector, type_nucl_vector[2]);
+  }
+
+
+    printf("debut nucl_vecctor_device\n");
+  int32_t mask = 1 << 2;
+
+  int64_t type_nucl_num;
+  qmckl_exit_code rc = qmckl_get_jastrow_type_nucl_num(context, &type_nucl_num);
+
+#pragma omp target is_device_ptr(type_nucl_vector)
+  {
+  printf("type_nucl_vect size %d, type nuc first = %ld\n", sizeof(type_nucl_vector), type_nucl_vector[2]);
+  }
+
+
+
+
+  if (rc != QMCKL_SUCCESS) return rc;
+
+  if (type_nucl_num == 0) {
+    return qmckl_failwith( context,
+                           QMCKL_FAILURE,
+                           "qmckl_set_jastrow_type_nucl_vector",
+                           "type_nucl_num is not set");
+  }
+
+  if (type_nucl_vector == NULL) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_2,
+                           "qmckl_set_jastrow_type_nucl_vector",
+                           "type_nucl_vector = NULL");
+  }
+
+  if (ctx->jastrow.type_nucl_vector != NULL) {
+    rc = qmckl_free(context, ctx->jastrow.type_nucl_vector);
+    if (rc != QMCKL_SUCCESS) {
+      return qmckl_failwith( context, rc,
+                             "qmckl_set_type_nucl_vector",
+                             NULL);
+    }
+  }
+#pragma omp target is_device_ptr(type_nucl_vector)
+  {
+  printf("type_nucl_vect size %d, type nuc first = %ld\n", sizeof(type_nucl_vector), type_nucl_vector[2]);
+  }
+
+
+  qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
+  mem_info.size = nucl_num * sizeof(int64_t);
+  int64_t* new_array = (int64_t*)qmckl_malloc_device(context, mem_info, device_id);
+#pragma omp target is_device_ptr(type_nucl_vector, new_array)
+  {
+  printf("type_nucl_vect size %d, type nuc first = %ld\n", sizeof(type_nucl_vector), type_nucl_vector[2]);
+  }
+
+
+  if(new_array == NULL) {
+    return qmckl_failwith( context,
+                           QMCKL_ALLOCATION_FAILED,
+                           "qmckl_set_jastrow_type_nucl_vector",
+                           NULL);
+  }
+  omp_target_memcpy(new_array, type_nucl_vector,
+                    mem_info.size,
+                    0, 0,
+                    device_id, device_id
+                    );
+
+  ctx->jastrow.type_nucl_vector = new_array;
+
+  <<post2_device>>
+}
+
+
+qmckl_exit_code
+qmckl_set_jastrow_aord_vector_device(qmckl_context context,
+                              double const * aord_vector,
+                              const int64_t size_max,
+                                     int device_id)
+{
+<<pre2>>
+
+  int32_t mask = 1 << 3;
+
+  int64_t aord_num;
+  qmckl_exit_code rc = qmckl_get_jastrow_aord_num(context, &aord_num);
+  if (rc != QMCKL_SUCCESS) return rc;
+
+  int64_t type_nucl_num;
+  rc = qmckl_get_jastrow_type_nucl_num(context, &type_nucl_num);
+  if (rc != QMCKL_SUCCESS) return rc;
+
+  if (aord_num == 0) {
+    return qmckl_failwith( context,
+                           QMCKL_FAILURE,
+                           "qmckl_set_jastrow_coefficient",
+                           "aord_num is not set");
+  }
+
+  if (aord_vector == NULL) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_2,
+                           "qmckl_set_jastrow_aord_vector",
+                           "aord_vector = NULL");
+  }
+
+  if (ctx->jastrow.aord_vector != NULL) {
+    rc = qmckl_free(context, ctx->jastrow.aord_vector);
+    if (rc != QMCKL_SUCCESS) {
+      return qmckl_failwith( context, rc,
+                             "qmckl_set_ord_vector",
+                             NULL);
+    }
+  }
+
+  qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
+  mem_info.size = (aord_num + 1) * type_nucl_num * sizeof(double);
+
+  if ((size_t) size_max < mem_info.size/sizeof(double)) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_3,
+                           "qmckl_set_jastrow_aord_vector",
+                           "Array too small. Expected (aord_num+1)*type_nucl_num");
+  }
+
+  double* new_array = (double*) qmckl_malloc_device(context, mem_info, device_id);
+
+  if(new_array == NULL) {
+    return qmckl_failwith( context,
+                           QMCKL_ALLOCATION_FAILED,
+                           "qmckl_set_jastrow_coefficient",
+                           NULL);
+  }
+
+  omp_target_memcpy(new_array, aord_vector, mem_info.size,
+                    0, 0,
+                    device_id, omp_get_initial_device()
+                    );
+
+  ctx->jastrow.aord_vector = new_array;
+
+  <<post2_device>>
+}
+
+
+qmckl_exit_code
+qmckl_set_jastrow_bord_vector_device(qmckl_context context,
+                              double const * bord_vector,
+                              const int64_t size_max,
+                                     int device_id)
+{
+<<pre2>>
+
+  int32_t mask = 1 << 4;
+
+  int64_t bord_num;
+  qmckl_exit_code rc = qmckl_get_jastrow_bord_num(context, &bord_num);
+  if (rc != QMCKL_SUCCESS) return rc;
+
+  if (bord_num == 0) {
+    return qmckl_failwith( context,
+                           QMCKL_FAILURE,
+                           "qmckl_set_jastrow_coefficient",
+                           "bord_num is not set");
+  }
+
+  if (bord_vector == NULL) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_2,
+                           "qmckl_set_jastrow_bord_vector",
+                           "bord_vector = NULL");
+  }
+
+  if (ctx->jastrow.bord_vector != NULL) {
+    rc = qmckl_free(context, ctx->jastrow.bord_vector);
+    if (rc != QMCKL_SUCCESS) {
+      return qmckl_failwith( context, rc,
+                             "qmckl_set_ord_vector",
+                             NULL);
+    }
+  }
+
+  qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
+  mem_info.size = (bord_num + 1) * sizeof(double);
+
+  if ((size_t) size_max < mem_info.size/sizeof(double)) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_3,
+                           "qmckl_set_jastrow_bord_vector",
+                           "Array too small. Expected (bord_num+1)");
+  }
+
+  double* new_array = (double*) qmckl_malloc_device(context, mem_info, device_id);
+
+  if(new_array == NULL) {
+    return qmckl_failwith( context,
+                           QMCKL_ALLOCATION_FAILED,
+                           "qmckl_set_jastrow_coefficient",
+                           NULL);
+  }
+
+  omp_target_memcpy(new_array, bord_vector, mem_info.size,
+                    0, 0,
+                    device_id, omp_get_initial_device()
+                    );
+
+  ctx->jastrow.bord_vector = new_array;
+
+  <<post2_device>>
+}
+
+
+qmckl_exit_code
+qmckl_set_jastrow_cord_vector_device(qmckl_context context,
+                              double const * cord_vector,
+                              const int64_t size_max,
+                                     int device_id)
+{
+<<pre2>>
+
+  int32_t mask = 1 << 5;
+
+  qmckl_exit_code rc = qmckl_provide_dim_cord_vect(context);
+  if (rc != QMCKL_SUCCESS) return rc;
+
+  int64_t dim_cord_vect;
+  rc = qmckl_get_jastrow_dim_cord_vect(context, &dim_cord_vect);
+  if (rc != QMCKL_SUCCESS) return rc;
+
+  int64_t type_nucl_num;
+  rc = qmckl_get_jastrow_type_nucl_num(context, &type_nucl_num);
+  if (rc != QMCKL_SUCCESS) return rc;
+
+  if (dim_cord_vect == 0) {
+    return qmckl_failwith( context,
+                           QMCKL_FAILURE,
+                           "qmckl_set_jastrow_coefficient",
+                           "dim_cord_vect is not set");
+  }
+
+  if (cord_vector == NULL) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_2,
+                           "qmckl_set_jastrow_cord_vector",
+                           "cord_vector = NULL");
+  }
+
+  if (ctx->jastrow.cord_vector != NULL) {
+    rc = qmckl_free(context, ctx->jastrow.cord_vector);
+    if (rc != QMCKL_SUCCESS) {
+      return qmckl_failwith( context, rc,
+                             "qmckl_set_ord_vector",
+                             NULL);
+    }
+  }
+
+  qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
+  mem_info.size = dim_cord_vect * type_nucl_num * sizeof(double);
+
+  if ((size_t) size_max < mem_info.size/sizeof(double)) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_3,
+                           "qmckl_set_jastrow_cord_vector",
+                           "Array too small. Expected dim_cord_vect * type_nucl_num");
+  }
+
+  double* new_array = (double*) qmckl_malloc_device(context, mem_info, device_id);
+
+  if(new_array == NULL) {
+    return qmckl_failwith( context,
+                           QMCKL_ALLOCATION_FAILED,
+                           "qmckl_set_jastrow_coefficient",
+                           NULL);
+  }
+
+  omp_target_memcpy(new_array, cord_vector, mem_info.size,
+                    0, 0,
+                    device_id, omp_get_initial_device()
+                    );
+
+  ctx->jastrow.cord_vector = new_array;
+
+  <<post2_device>>
+}
+#endif
+   #+end_src
+
+
+
  When the required information is completely entered, other data structures are
  computed to accelerate the calculations. The intermediates factors
  are precontracted using BLAS LEVEL 3 operations for an optimal flop count.
@@ -1479,11 +1795,11 @@ end function qmckl_compute_asymp_jasb_f
 
 #+begin_src c :comments org :tangle (eval c) :noweb yes
 qmckl_exit_code qmckl_compute_asymp_jasb (
-    const qmckl_context context,
-    const int64_t bord_num,
-    const double* bord_vector,
-    const double rescale_factor_kappa_ee,
-    double* const asymp_jasb ) {
+	  const qmckl_context context,
+	  const int64_t bord_num,
+	  const double* bord_vector,
+	  const double rescale_factor_kappa_ee,
+	  double* const asymp_jasb ) {
 
     if (context == QMCKL_NULL_CONTEXT){
       return QMCKL_INVALID_CONTEXT;
@@ -2614,7 +2930,7 @@ qmckl_exit_code qmckl_provide_factor_en(qmckl_context context)
     if (rc != QMCKL_SUCCESS) {
       return rc;
     }
-
+    
     ctx->jastrow.factor_en_date = ctx->date;
   }
 
@@ -5191,7 +5507,16 @@ qmckl_exit_code qmckl_provide_tmp_c(qmckl_context context)
 #endif
 
     if (gpu_offload) {
-#ifdef HAVE_CUBLAS_OFFLOAD
+#ifdef HAVE_DEVICE_PTR
+      rc = qmckl_compute_tmp_c_device_ptr_offload(context,
+                                              ctx->jastrow.cord_num,
+                                              ctx->electron.num,
+                                              ctx->nucleus.num,
+                                              ctx->electron.walk_num,
+                                              ctx->jastrow.een_rescaled_e,
+                                              ctx->jastrow.een_rescaled_n,
+                                              ctx->jastrow.tmp_c);
+#elif HAVE_CUBLAS_OFFLOAD
       rc = qmckl_compute_tmp_c_cublas_offload(context,
                                               ctx->jastrow.cord_num,
                                               ctx->electron.num,
@@ -6073,24 +6398,26 @@ qmckl_compute_tmp_c_acc_offload (const qmckl_context context,
 
   #pragma acc parallel copyout(tmp_c [0:size_tmp_c]) copyin(een_rescaled_e[0:size_e], een_rescaled_n[0:size_n])
   {
-#pragma acc loop independent gang worker vector collapse(5)
-    for (int nw=0; nw < walk_num; ++nw) {
-      for (int i=0; i<cord_num; ++i){
+  #pragma acc loop independent gang worker vector collapse(4)
+  for (int nw=0; nw < walk_num; ++nw) {
+    for (int i=0; i<cord_num; ++i){
 
-        // Replacement for single DGEMM
-        for (int j=0; j<cord_num+1; j++) {
-          for (int k=0; k<nucl_num; k++) {
-            for (int l=0; l<elec_num; l++) {
+      // Replacement for single DGEMM
+      for (int jk=0; jk<nucl_num*(cord_num+1); jk++) {
+        for (int l=0; l<elec_num; l++) {
 
-              // Single reduction
-              tmp_c[l + k*stride_k_c + j*stride_j_c + i*stride_i_c + nw*stride_nw_c] = 0.;
-              for (int m=0; m<elec_num; m++) {
-                tmp_c[l + k*stride_k_c + j*stride_j_c + i*stride_i_c + nw*stride_nw_c] =
-                tmp_c[l + k*stride_k_c + j*stride_j_c + i*stride_i_c + nw*stride_nw_c] +
-                een_rescaled_e[l + m*stride_m_e + i*stride_i_e + nw*stride_nw_e] *
-                een_rescaled_n[m + k*stride_k_n + j*stride_j_n + nw*stride_nw_n];
-            }
+		  int index_e_base = l + i*stride_i_e + nw*stride_nw_e;
+		  int index_n_base = jk*stride_k_n + nw*stride_nw_n;
+
+          // Single reduction
+		  double sum = 0.;
+          for (int m=0; m<elec_num; m++) {
+            sum +=
+            een_rescaled_e[index_e_base + m*stride_m_e] *
+            een_rescaled_n[index_n_base + m];
           }
+          tmp_c[l + jk*stride_k_c + i*stride_i_c + nw*stride_nw_c] = sum;
+
         }
       }
     }
@@ -6166,32 +6493,33 @@ qmckl_compute_tmp_c_omp_offload (const qmckl_context context,
   const int64_t size_e = walk_num*(cord_num+1)*elec_num*elec_num;
   const int64_t size_n = walk_num*(cord_num+1)*nucl_num*elec_num;
 
-
-  // WARNING This implementation seems unomptimized
-  #pragma omp target map(from:tmp_c[0:size_tmp_c]) map(to:een_rescaled_e[0:size_e], een_rescaled_n[0:size_n])
+  #pragma omp target data map(from:tmp_c[0:size_tmp_c]) map(to:een_rescaled_e[0:size_e], een_rescaled_n[0:size_n])
   {
-  #pragma omp teams distribute parallel for collapse(5)
-    for (int nw=0; nw < walk_num; ++nw) {
-      for (int i=0; i<cord_num; ++i){
+  #pragma omp target teams distribute parallel for collapse(4)
+  for (int nw=0; nw < walk_num; ++nw) {
+    for (int i=0; i<cord_num; ++i){
 
-        // Replacement for single DGEMM
-        for (int j=0; j<cord_num+1; j++) {
-          for (int k=0; k<nucl_num; k++) {
-            for (int l=0; l<elec_num; l++) {
+      // Replacement for single DGEMM
+      for (int jk=0; jk<nucl_num*(cord_num+1); jk++) {
+        for (int l=0; l<elec_num; l++) {
 
-              // Single reduction
-              tmp_c[l + k*stride_k_c + j*stride_j_c + i*stride_i_c + nw*stride_nw_c] = 0.;
-              for (int m=0; m<elec_num; m++) {
-                tmp_c[l + k*stride_k_c + j*stride_j_c + i*stride_i_c + nw*stride_nw_c] =
-                  tmp_c[l + k*stride_k_c + j*stride_j_c + i*stride_i_c + nw*stride_nw_c] +
-                  een_rescaled_e[l + m*stride_m_e + i*stride_i_e + nw*stride_nw_e] *
-                  een_rescaled_n[m + k*stride_k_n + j*stride_j_n + nw*stride_nw_n];
-              }
-            }
+		  int index_e_base = l + i*stride_i_e + nw*stride_nw_e;
+		  int index_n_base = jk*stride_k_n + nw*stride_nw_n;
+
+          // Single reduction
+		  double sum = 0.;
+		  #pragma omp simd reduction(+:sum)
+          for (int m=0; m<elec_num; m++) {
+            sum +=
+            een_rescaled_e[index_e_base + m*stride_m_e] *
+            een_rescaled_n[index_n_base + m];
           }
+          tmp_c[l + jk*stride_k_c + i*stride_i_c + nw*stride_nw_c] = sum;
+
         }
       }
     }
+  }
   }
 
   return QMCKL_SUCCESS;
@@ -6203,6 +6531,105 @@ qmckl_compute_tmp_c_omp_offload (const qmckl_context context,
 #ifdef HAVE_OPENMP_OFFLOAD
 qmckl_exit_code
 qmckl_compute_tmp_c_omp_offload (const qmckl_context context,
+                                 const int64_t cord_num,
+                                 const int64_t elec_num,
+                                 const int64_t nucl_num,
+                                 const int64_t walk_num,
+                                 const double* een_rescaled_e,
+                                 const double* een_rescaled_n,
+                                 double* const tmp_c );
+#endif
+     #+end_src
+
+**** DevicePtr offload
+     #+begin_src c :comments org :tangle (eval c) :noweb yes
+#if defined(HAVE_OPENMP_OFFLOAD) && defined(HAVE_DEVICE_PTR)
+qmckl_exit_code
+qmckl_compute_tmp_c_device_ptr_offload (const qmckl_context context,
+                                 const int64_t cord_num,
+                                 const int64_t elec_num,
+                                 const int64_t nucl_num,
+                                 const int64_t walk_num,
+                                 const double* een_rescaled_e,
+                                 const double* een_rescaled_n,
+                                 double* const tmp_c,
+
+                                int device_id )
+{
+
+  if (context == QMCKL_NULL_CONTEXT) {
+    return QMCKL_INVALID_CONTEXT;
+  }
+
+  if (cord_num <= 0) {
+    return QMCKL_INVALID_ARG_2;
+  }
+
+  if (elec_num <= 0) {
+    return QMCKL_INVALID_ARG_3;
+  }
+
+  if (nucl_num <= 0) {
+    return QMCKL_INVALID_ARG_4;
+  }
+
+  // Compute array access strides:
+  // For tmp_c...
+  const int64_t stride_k_c  = elec_num;
+  const int64_t stride_j_c  = stride_k_c * nucl_num;
+  const int64_t stride_i_c  = stride_j_c * (cord_num+1);
+  const int64_t stride_nw_c = stride_i_c * cord_num;
+  // For een_rescaled_e...
+  const int64_t stride_m_e  = elec_num;
+  const int64_t stride_i_e  = stride_m_e * elec_num;
+  const int64_t stride_nw_e = stride_i_e * (cord_num+1);
+  // For een_rescaled_n...
+  const int64_t stride_k_n  = elec_num;
+  const int64_t stride_j_n  = stride_k_n * nucl_num;
+  const int64_t stride_nw_n = stride_j_n * (cord_num+1);
+
+  const int64_t size_tmp_c = elec_num*nucl_num*(cord_num+1)*cord_num*walk_num;
+  const int64_t size_e = walk_num*(cord_num+1)*elec_num*elec_num;
+  const int64_t size_n = walk_num*(cord_num+1)*nucl_num*elec_num;
+
+  #pragma omp target data map(from:tmp_c[0:size_tmp_c]) map(to:een_rescaled_e[0:size_e], een_rescaled_n[0:size_n])
+  {
+  #pragma omp target teams distribute parallel for collapse(4)
+  for (int nw=0; nw < walk_num; ++nw) {
+    for (int i=0; i<cord_num; ++i){
+
+      // Replacement for single DGEMM
+      for (int jk=0; jk<nucl_num*(cord_num+1); jk++) {
+        for (int l=0; l<elec_num; l++) {
+
+		  int index_e_base = l + i*stride_i_e + nw*stride_nw_e;
+		  int index_n_base = jk*stride_k_n + nw*stride_nw_n;
+
+          // Single reduction
+		  double sum = 0.;
+		  #pragma omp simd reduction(+:sum)
+          for (int m=0; m<elec_num; m++) {
+            sum +=
+            een_rescaled_e[index_e_base + m*stride_m_e] *
+            een_rescaled_n[index_n_base + m];
+          }
+          tmp_c[l + jk*stride_k_c + i*stride_i_c + nw*stride_nw_c] = sum;
+
+        }
+      }
+    }
+  }
+  }
+
+  return QMCKL_SUCCESS;
+}
+#endif
+     #+end_src
+
+    #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :exports none
+#if defined(HAVE_OPENMP_OFFLOAD) && defined(HAVE_DEVICE_PTR)
+qmckl_exit_code
+qmckl_compute_tmp_c_device_ptr_offload (const qmckl_context context,
                                  const int64_t cord_num,
                                  const int64_t elec_num,
                                  const int64_t nucl_num,
@@ -6229,30 +6656,6 @@ qmckl_compute_tmp_c_cublas_offload (const qmckl_context context,
 {
   qmckl_exit_code info;
 
-  //Initialisation of cublas
-
-  cublasHandle_t handle;
-  if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS)
-    {
-      fprintf(stdout, "CUBLAS initialization failed!\n");
-      exit(EXIT_FAILURE);
-    }
-
-
-
-  qmckl_exit_code info;
-
-  //Initialisation of cublas
-
-  cublasHandle_t handle;
-  if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS)
-    {
-      fprintf(stdout, "CUBLAS initialization failed!\n");
-      exit(EXIT_FAILURE);
-    }
-
-
-
   if (context == QMCKL_NULL_CONTEXT) {
     return QMCKL_INVALID_CONTEXT;
   }
@@ -6267,6 +6670,14 @@ qmckl_compute_tmp_c_cublas_offload (const qmckl_context context,
 
   if (nucl_num <= 0) {
     return QMCKL_INVALID_ARG_4;
+  }
+
+  //cuBLAS initialization
+  cublasHandle_t handle;
+  if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS)
+  {
+    fprintf(stdout, "CUBLAS initialization failed!\n");
+    exit(EXIT_FAILURE);
   }
 
   const double alpha = 1.0;
@@ -6284,45 +6695,24 @@ qmckl_compute_tmp_c_cublas_offload (const qmckl_context context,
   const int64_t bf = elec_num*nucl_num*(cord_num+1);
   const int64_t cf = bf;
 
-
   #pragma omp target enter data map(to:een_rescaled_e[0:elec_num*elec_num*(cord_num+1)*walk_num],een_rescaled_n[0:M*N*walk_num],tmp_c[0:elec_num*nucl_num*(cord_num+1)*cord_num*walk_num])
   #pragma omp target data use_device_ptr(een_rescaled_e,een_rescaled_n,tmp_c)
   {
   for (int nw=0; nw < walk_num; ++nw) {
 
-      int cublasError = cublasDgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, M, N, K, &alpha,
-                                    &(een_rescaled_e[nw*(cord_num+1)]), \
-                                    LDA, af,                                \
-                                    &(een_rescaled_n[bf*nw]),           \
-                                    LDB, 0,                            \
-                                    &beta,                               \
-                                    &(tmp_c[nw*cord_num]),       \
+    int cublasError = cublasDgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, M, N, K, &alpha,
+                                    &(een_rescaled_e[nw*(cord_num+1)]),
+                                    LDA, af,
+                                    &(een_rescaled_n[bf*nw]),
+                                    LDB, 0,
+                                    &beta,
+                                    &(tmp_c[nw*cord_num]),
                                     LDC, cf, cord_num);
-
-
-        //Manage cublas ERROR
-      if(cublasError != CUBLAS_STATUS_SUCCESS){
-            printf("CUBLAS ERROR %d", cublasError);
-            info = QMCKL_FAILURE;
-
-            return info;
-      }else{
-        info = QMCKL_SUCCESS;
-      }
-
-
-
-    
   }
   }
-  cudaDeviceSynchronize();
-  cublasDestroy(handle);
-
-
   #pragma omp target exit data map(from:tmp_c[0:elec_num*nucl_num*(cord_num+1)*cord_num*walk_num])
 
-
-
+  cublasDestroy(handle);
   return info;
   }
 #endif
@@ -6640,26 +7030,25 @@ qmckl_compute_dtmp_c_acc_offload (
 
   #pragma acc parallel copyout(dtmp_c [0:size_dtmp_c]) copyin(een_rescaled_e_deriv_e[0:size_e], een_rescaled_n[0:size_n])
   {
-  #pragma acc loop independent gang worker vector collapse(6)
+  #pragma acc loop independent gang worker vector collapse(4)
   for (int nw=0; nw < walk_num; nw++) {
     for (int i=0; i < cord_num; i++) {
 
       // Single DGEMM
-      for(int j=0; j<cord_num+1; j++) {
-        for(int k=0; k<nucl_num; k++) {
-          for(int l=0; l<4; l++) {
-            for(int m=0; m<elec_num; m++) {
+      for(int jk=0; jk<nucl_num*(cord_num+1); jk++) {
+        for(int ml=0; ml<4*elec_num; ml++) {
 
-              // Single reduction
-              dtmp_c[m + l * stride_l_d + k * stride_k_d + j * stride_j_d + i * stride_i_d + nw * stride_nw_d] = 0.;
-              for(int n=0; n<elec_num; n++){
-                dtmp_c[m + l * stride_l_d + k * stride_k_d + j * stride_j_d + i * stride_i_d + nw * stride_nw_d] =
-                dtmp_c[m + l * stride_l_d + k * stride_k_d + j * stride_j_d + i * stride_i_d + nw * stride_nw_d] +
-                een_rescaled_e_deriv_e[m + l * stride_l_e +  n * stride_n_e + i * stride_i_e + nw * stride_nw_e] *
-                een_rescaled_n[n + k * stride_k_n + j * stride_j_n + nw * stride_nw_n];
-              }
-            }
+          // Single reduction
+		  int index_n_base = jk * stride_k_n  + nw * stride_nw_n;
+		  int index_e_base = ml + i * stride_i_e + nw * stride_nw_e;
+		  double sum = 0.;
+          for(int n=0; n<elec_num; n++){
+            sum +=
+            een_rescaled_e_deriv_e[index_e_base + n * stride_n_e] *
+            een_rescaled_n[index_n_base + n];
           }
+          dtmp_c[ml + jk * stride_k_d + i * stride_i_d + nw * stride_nw_d] = sum;
+
         }
       }
     }
@@ -6668,6 +7057,7 @@ qmckl_compute_dtmp_c_acc_offload (
 
   return QMCKL_SUCCESS;
 }
+
 #endif
      #+end_src
 
@@ -6732,35 +7122,34 @@ qmckl_exit_code qmckl_compute_dtmp_c_omp_offload (
   const int64_t stride_j_n  = stride_k_n * nucl_num;
   const int64_t stride_nw_n = stride_j_n * (cord_num+1);
 
-
   const int64_t size_dtmp_c = walk_num*cord_num*(cord_num+1)*nucl_num*4*elec_num;
   const int64_t size_n = walk_num*(cord_num+1)*nucl_num*elec_num;
   const int64_t size_e = walk_num*(cord_num+1)*elec_num*4*elec_num;
 
-  // WARNING This implementation seems unomptimized
-  #pragma omp target map(from:dtmp_c[0:size_dtmp_c]) map(to:een_rescaled_e_deriv_e[0:size_e], een_rescaled_n[0:size_n])
-  {
 
-  #pragma omp teams distribute parallel for collapse(6)
+  double sum = 0.;
+  #pragma omp target data map(from:dtmp_c[0:size_dtmp_c]) map(to:een_rescaled_e_deriv_e[0:size_e], een_rescaled_n[0:size_n])
+  {
+  #pragma omp target teams distribute parallel for collapse(4)
   for (int nw=0; nw < walk_num; nw++) {
     for (int i=0; i < cord_num; i++) {
 
       // Single DGEMM
-      for(int j=0; j<cord_num+1; j++) {
-        for(int k=0; k<nucl_num; k++) {
-          for(int l=0; l<4; l++) {
-            for(int m=0; m<elec_num; m++) {
+      for(int jk=0; jk<nucl_num*(cord_num+1); jk++) {
+        for(int ml=0; ml<4*elec_num; ml++) {
 
-              // Single reduction
-              dtmp_c[m + l * stride_l_d + k * stride_k_d + j * stride_j_d + i * stride_i_d + nw * stride_nw_d] = 0;
-              for(int n=0; n<elec_num; n++){
-                dtmp_c[m + l * stride_l_d + k * stride_k_d + j * stride_j_d + i * stride_i_d + nw * stride_nw_d] =
-                dtmp_c[m + l * stride_l_d + k * stride_k_d + j * stride_j_d + i * stride_i_d + nw * stride_nw_d] +
-                een_rescaled_e_deriv_e[m + l * stride_l_e +  n * stride_n_e + i * stride_i_e + nw * stride_nw_e] *
-                een_rescaled_n[n + k * stride_k_n + j * stride_j_n + nw * stride_nw_n];
-              }
-            }
+          // Single reduction
+		  int index_n_base = jk * stride_k_n  + nw * stride_nw_n;
+		  int index_e_base = ml + i * stride_i_e + nw * stride_nw_e;
+		  sum = 0.;
+		  #pragma omp simd reduction(+:sum)
+          for(int n=0; n<elec_num; n++){
+            sum +=
+            een_rescaled_e_deriv_e[index_e_base + n * stride_n_e] *
+            een_rescaled_n[index_n_base + n];
           }
+          dtmp_c[ml + jk * stride_k_d + i * stride_i_d + nw * stride_nw_d] = sum;
+
         }
       }
     }
@@ -6786,6 +7175,127 @@ qmckl_exit_code qmckl_compute_dtmp_c_omp_offload (
 #endif
      #+end_src
 
+
+****  ptr device offload
+
+     #+begin_src c :comments org :tangle (eval c) :noweb yes
+#if defined(HAVE_OPENMP_OFFLOAD) && defined(HAVE_DEVICE_PTR)
+qmckl_exit_code
+qmckl_compute_tmp_c_omp_offload (const qmckl_context context,
+                                 const int64_t cord_num,
+                                 const int64_t elec_num,
+                                 const int64_t nucl_num,
+                                 const int64_t walk_num,
+                                 const double* een_rescaled_e,
+                                 const double* een_rescaled_n,
+                                 double* const tmp_c )
+{
+
+  if (context == QMCKL_NULL_CONTEXT) {
+    return QMCKL_INVALID_CONTEXT;
+  }
+
+  if (cord_num <= 0) {
+    return QMCKL_INVALID_ARG_2;
+  }
+
+  if (elec_num <= 0) {
+    return QMCKL_INVALID_ARG_3;
+  }
+
+  if (nucl_num <= 0) {
+    return QMCKL_INVALID_ARG_4;
+  }
+
+  // Compute array access strides:
+  // For tmp_c...
+  const int64_t stride_k_c  = elec_num;
+  const int64_t stride_j_c  = stride_k_c * nucl_num;
+  const int64_t stride_i_c  = stride_j_c * (cord_num+1);
+  const int64_t stride_nw_c = stride_i_c * cord_num;
+  // For een_rescaled_e...
+  const int64_t stride_m_e  = elec_num;
+  const int64_t stride_i_e  = stride_m_e * elec_num;
+  const int64_t stride_nw_e = stride_i_e * (cord_num+1);
+  // For een_rescaled_n...
+  const int64_t stride_k_n  = elec_num;
+  const int64_t stride_j_n  = stride_k_n * nucl_num;
+  const int64_t stride_nw_n = stride_j_n * (cord_num+1);
+
+  const int64_t size_tmp_c = elec_num*nucl_num*(cord_num+1)*cord_num*walk_num;
+  const int64_t size_e = walk_num*(cord_num+1)*elec_num*elec_num;
+  const int64_t size_n = walk_num*(cord_num+1)*nucl_num*elec_num;
+
+  #pragma omp target is_device_ptr(tmp_c, een_rescaled_e, een_rescaled_n)
+  {
+    // Compute array access strides:
+    // For tmp_c...
+    const int64_t stride_k_c  = elec_num;
+    const int64_t stride_j_c  = stride_k_c * nucl_num;
+    const int64_t stride_i_c  = stride_j_c * (cord_num+1);
+    const int64_t stride_nw_c = stride_i_c * cord_num;
+    // For een_rescaled_e...
+    const int64_t stride_m_e  = elec_num;
+    const int64_t stride_i_e  = stride_m_e * elec_num;
+    const int64_t stride_nw_e = stride_i_e * (cord_num+1);
+    // For een_rescaled_n...
+    const int64_t stride_k_n  = elec_num;
+    const int64_t stride_j_n  = stride_k_n * nucl_num;
+    const int64_t stride_nw_n = stride_j_n * (cord_num+1);
+
+    const int64_t size_tmp_c = elec_num*nucl_num*(cord_num+1)*cord_num*walk_num;
+    const int64_t size_e = walk_num*(cord_num+1)*elec_num*elec_num;
+    const int64_t size_n = walk_num*(cord_num+1)*nucl_num*elec_num;
+
+
+  #pragma omp target teams distribute parallel for collapse(4)
+  for (int nw=0; nw < walk_num; ++nw) {
+    for (int i=0; i<cord_num; ++i){
+
+      // Replacement for single DGEMM
+      for (int jk=0; jk<nucl_num*(cord_num+1); jk++) {
+        for (int l=0; l<elec_num; l++) {
+
+		  int index_e_base = l + i*stride_i_e + nw*stride_nw_e;
+		  int index_n_base = jk*stride_k_n + nw*stride_nw_n;
+
+          // Single reduction
+		  double sum = 0.;
+		  #pragma omp simd reduction(+:sum)
+          for (int m=0; m<elec_num; m++) {
+            sum +=
+            een_rescaled_e[index_e_base + m*stride_m_e] *
+            een_rescaled_n[index_n_base + m];
+          }
+          tmp_c[l + jk*stride_k_c + i*stride_i_c + nw*stride_nw_c] = sum;
+
+        }
+      }
+    }
+  }
+  }
+
+  return QMCKL_SUCCESS;
+}
+#endif
+     #+end_src
+
+
+    #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :exports none
+#if defined(HAVE_OPENMP_OFFLOAD) && defined(HAVE_DEVICE_PTR)
+qmckl_exit_code
+qmckl_compute_tmp_c_device_ptr_offload (const qmckl_context context,
+                                 const int64_t cord_num,
+                                 const int64_t elec_num,
+                                 const int64_t nucl_num,
+                                 const int64_t walk_num,
+                                 const double* een_rescaled_e,
+                                 const double* een_rescaled_n,
+                                 double* const tmp_c );
+#endif
+     #+end_src
+
+
 **** cuBLAS offload                                                :noexport:
 
      #+begin_src c :comments org :tangle (eval c) :noweb yes
@@ -6800,15 +7310,6 @@ qmckl_compute_dtmp_c_cublas_offload (
       const double* een_rescaled_e_deriv_e,
       const double* een_rescaled_n,
       double* const dtmp_c ) {
-
-  cublasHandle_t handle;
-  if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS)
-    {
-      fprintf(stdout, "CUBLAS initialization failed!\n");
-      exit(EXIT_FAILURE);
-    }
-
-
 
   if (context == QMCKL_NULL_CONTEXT) {
     return QMCKL_INVALID_CONTEXT;
@@ -6832,6 +7333,14 @@ qmckl_compute_dtmp_c_cublas_offload (
 
   qmckl_exit_code  info = QMCKL_SUCCESS;
 
+  //cuBLAS initialization
+  cublasHandle_t handle;
+  if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS)
+  {
+    fprintf(stdout, "CUBLAS initialization failed!\n");
+    exit(EXIT_FAILURE);
+  }
+
   const double alpha = 1.0;
   const double beta  = 0.0;
 
@@ -6847,38 +7356,25 @@ qmckl_compute_dtmp_c_cublas_offload (
   const int64_t bf = elec_num*nucl_num*(cord_num+1);
   const int64_t cf = elec_num*4*nucl_num*(cord_num+1);
 
-#pragma omp target enter data map(to:een_rescaled_e_deriv_e[0:elec_num*4*elec_num*(cord_num+1)*walk_num], een_rescaled_n[0:elec_num*nucl_num*(cord_num+1)*walk_num], dtmp_c[0:elec_num*4*nucl_num*(cord_num+1)*cord_num*walk_num])
-#pragma omp target data use_device_ptr(een_rescaled_e_deriv_e, een_rescaled_n, dtmp_c)
+  #pragma omp target enter data map(to:een_rescaled_e_deriv_e[0:elec_num*4*elec_num*(cord_num+1)*walk_num], een_rescaled_n[0:elec_num*nucl_num*(cord_num+1)*walk_num], dtmp_c[0:elec_num*4*nucl_num*(cord_num+1)*cord_num*walk_num])
+  #pragma omp target data use_device_ptr(een_rescaled_e_deriv_e, een_rescaled_n, dtmp_c)
   {
-    for (int64_t nw=0; nw < walk_num; ++nw) {
-           //Manage CUBLAS ERRORS
-
- int cublasError = cublasDgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, M, N, K, &alpha,        \
-                                      &(een_rescaled_e_deriv_e[(nw*(cord_num+1))]), \
-                                      LDA, af,                                               \
-                                      &(een_rescaled_n[bf*nw]),   \
-                                      LDB, 0,                                               \
-                                      &beta,                                              \
-                                      &(dtmp_c[(nw*cord_num)]), \
+  #pragma omp parallel for
+  for (int64_t nw=0; nw < walk_num; ++nw) {
+    int cublasError = cublasDgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, M, N, K, &alpha,
+                                      &(een_rescaled_e_deriv_e[(nw*(cord_num+1))]),
+                                      LDA, af,
+                                      &(een_rescaled_n[bf*nw]), LDB, 0,
+                                      &beta,
+                                      &(dtmp_c[(nw*cord_num)]),
                                       LDC, cf, cord_num);
 
-
-        if(cublasError != CUBLAS_STATUS_SUCCESS){
-        printf("CUBLAS ERROR %d", cublasError);
-        info = QMCKL_FAILURE;
-        return info;
-        }else{
-        info = QMCKL_SUCCESS;
-        }
-
-      //}
-    }
   }
-  cudaDeviceSynchronize();
+  }
+
+  #pragma omp target exit data map(from:dtmp_c[0:cf*cord_num*walk_num])
+
   cublasDestroy(handle);
-
-#pragma omp target exit data map(from:dtmp_c[0:cf*cord_num*walk_num])
-
   return info;
 }
 #endif
@@ -6898,7 +7394,6 @@ qmckl_compute_dtmp_c_cublas_offload (
       double* const dtmp_c );
 #endif
      #+end_src
-
 *** Test
 
     #+name: helper_funcs
@@ -7530,6 +8025,55 @@ qmckl_get_jastrow_factor_een_deriv_e(qmckl_context context,
   return QMCKL_SUCCESS;
 }
     #+end_src
+
+**** Get device ptr
+    #+begin_src c :comments org :tangle (eval h_func) :noweb yes
+#ifdef HAVE_DEVICE_POINTERS
+qmckl_exit_code
+qmckl_get_jastrow_factor_een_deriv_e_device(qmckl_context context,
+                                     double* const factor_een_deriv_e,
+                                     const int64_t size_max,
+                                            int device_id);
+#endif
+    #+end_src
+
+    #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+#ifdef HAVE_DEVICE_POINTERS
+qmckl_exit_code
+qmckl_get_jastrow_factor_een_deriv_e_device(qmckl_context context,
+                                     double* const factor_een_deriv_e,
+                                     const int64_t size_max,
+                                            int device_id)
+{
+  if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+    return QMCKL_NULL_CONTEXT;
+  }
+
+  qmckl_exit_code rc;
+
+  rc = qmckl_provide_factor_een_deriv_e(context);
+  if (rc != QMCKL_SUCCESS) return rc;
+
+  qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  assert (ctx != NULL);
+
+  int64_t sze = ctx->electron.walk_num * 4 * ctx->electron.num;
+  if (size_max < sze) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_3,
+                           "qmckl_get_jastrow_factor_een_deriv_e",
+                           "Array too small. Expected 4*walk_num*elec_num");
+  }
+  omp_target_memcpy(factor_een_deriv_e, ctx->jastrow.factor_een_deriv_e, sze*sizeof(double),
+                    0, 0,
+                    device_id, omp_get_initial_device())
+    ;
+
+  return QMCKL_SUCCESS;
+}
+#endif
+    #+end_src
+
 
 *** Provide                                                        :noexport:
     #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :exports none

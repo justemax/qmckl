@@ -63,6 +63,7 @@ int main() {
 #include "qmckl_memory_private_type.h"
 #include "qmckl_memory_private_func.h"
 #include "qmckl_electron_private_func.h"
+#include "qmckl_distance_func.h"
   #+end_src
 
 * Context
@@ -135,6 +136,17 @@ typedef struct qmckl_electron_struct {
   double*        en_distance_rescaled_deriv_e;
   int32_t        uninitialized;
   bool           provided;
+
+  #ifdef HAVE_DEVICE_POINTERS
+    double*        ee_distance_device;
+    double*        en_distance_device;
+    double*        ee_pot_device;
+    double*        en_pot_device;
+    double*        ee_distance_rescaled_device;
+    double*        ee_distance_rescaled_deriv_e_device;
+    double*        en_distance_rescaled_device;
+    double*        en_distance_rescaled_deriv_e_device;
+  #endif
 } qmckl_electron_struct;
 
    #+end_src
@@ -483,6 +495,13 @@ qmckl_exit_code qmckl_set_electron_rescale_factor_ee (qmckl_context context, con
 qmckl_exit_code qmckl_set_electron_rescale_factor_en (qmckl_context context, const double kappa_en);
    #+end_src
 
+
+   #+begin_src c :comments org :tangle (eval h_func)
+#ifdef HAVE_DEVICE_POINTERS
+qmckl_exit_code qmckl_set_electron_coord_device    (qmckl_context context, const char transp, const double* coord, const int64_t size_max, int device_id);
+#endif
+   #+end_src
+
    #+NAME:pre2
    #+begin_src c :exports none
 if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
@@ -728,7 +747,74 @@ qmckl_set_electron_coord(qmckl_context context,
   return QMCKL_SUCCESS;
 
 }
-   #+end_src
+  #+end_src
+
+   #+begin_src c :comments org :tangle (eval c) :noweb yes :exports none
+#ifdef HAVE_DEVICE_POINTERS
+qmckl_exit_code
+qmckl_set_electron_coord_device(qmckl_context context,
+                                const char transp,
+                                const double* coord,
+                                const int64_t size_max,
+                                int device_id)
+{
+
+  <<pre2>>
+
+  if (transp != 'N' && transp != 'T') {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_2,
+                           "qmckl_set_electron_coord",
+                           "transp should be 'N' or 'T'");
+  }
+
+  if (coord == NULL) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_3,
+                           "qmckl_set_electron_coord",
+                           "coord is a null pointer");
+  }
+
+  const int64_t elec_num = ctx->electron.num;
+
+  if (elec_num == 0L) {
+    return qmckl_failwith( context,
+                           QMCKL_FAILURE,
+                           "qmckl_set_electron_coord",
+                           "elec_num is not set");
+  }
+
+  const int64_t walk_num = ctx->electron.walk_num;
+
+  const int64_t point_num = ctx->point.num ;
+
+  if (walk_num == 0L) {
+    return qmckl_failwith( context,
+                           QMCKL_FAILURE,
+                           "qmckl_set_electron_coord",
+                           "walk_num is not set");
+  }
+
+  assert(point_num == elec_num * walk_num);
+
+  /* Swap pointers */
+  ctx->point.coord         = ctx->electron.coord_old;
+  ctx->electron.coord_old  = ctx->electron.coord_new ;
+
+  qmckl_exit_code rc;
+  rc = qmckl_set_point_device(context, transp, coord, size_max/3, device_id);
+  assert (rc == QMCKL_SUCCESS);
+
+  ctx->electron.coord_new  = ctx->point.coord ;
+
+  ctx->electron.coord_new_date = ctx->date;
+
+  return QMCKL_SUCCESS;
+
+}
+#endif
+  #+end_src
+
 
    #+begin_src f90 :comments org :tangle (eval fh_func) :noweb yes
 interface
@@ -1021,6 +1107,51 @@ integer function qmckl_compute_ee_distance_f(context, elec_num, walk_num, coord,
 
 end function qmckl_compute_ee_distance_f
     #+end_src
+
+
+    #+begin_src c :tangle (eval c) :comments org :exports none
+qmckl_exit_code qmckl_compute_ee_distance_c (
+          const qmckl_context context,
+          const int64_t elec_num,
+          const int64_t walk_num,
+          const double* coord,
+          double* const ee_distance ){
+
+  if (context == QMCKL_NULL_CONTEXT){
+    return QMCKL_INVALID_CONTEXT;
+  }
+
+  if ( elec_num <= 0 ){
+    return QMCKL_INVALID_ARG_2;
+  }
+
+  if (walk_num <= 0){
+    return QMCKL_INVALID_ARG_3;
+  }
+
+  for(int k = 0; k < walk_num; k++){
+    if(qmckl_distance_c(context, 'T', 'T', elec_num, elec_num,
+                        coord, elec_num*walk_num,
+                        coord, elec_num*walk_num,
+                        ee_distance, elec_num) != QMCKL_SUCCESS){
+      return QMCKL_FAILURE;
+    }
+  }
+  return QMCKL_SUCCESS;
+
+}
+    #+end_src
+
+
+
+#+begin_src c :tangle (eval h_private_func) :comments org :exports none
+qmckl_exit_code qmckl_compute_ee_distance_c (
+          const qmckl_context context,
+          const int64_t elec_num,
+          const int64_t walk_num,
+          const double* coord,
+          double* const ee_distance );
+#+end_src
 
     #+begin_src c :tangle (eval h_private_func) :comments org :exports none
 qmckl_exit_code qmckl_compute_ee_distance (
@@ -1957,6 +2088,60 @@ integer function qmckl_compute_en_distance_f(context, elec_num, nucl_num, walk_n
   end do
 
 end function qmckl_compute_en_distance_f
+    #+end_src
+
+
+
+    #+begin_src c :comments org :tangle (eval c) :noweb yes
+qmckl_exit_code qmckl_compute_en_distance_c (
+          const qmckl_context context,
+          const int64_t elec_num,
+          const int64_t nucl_num,
+          const int64_t walk_num,
+          const double* elec_coord,
+          const double* nucl_coord,
+          double* const en_distance ){
+
+
+  if (context == QMCKL_NULL_CONTEXT){
+    return QMCKL_INVALID_CONTEXT;
+  }
+
+  if (elec_num <= 0){
+    return QMCKL_INVALID_ARG_2;
+  }
+
+  if (nucl_num <= 0){
+    return QMCKL_INVALID_ARG_3;
+  }
+
+
+  if (walk_num <= 0){
+    return QMCKL_INVALID_ARG_4;
+  }
+
+  for(int i = 0; i < walk_num; i++){
+    if(qmckl_distance_c(context, 'T', 'T', elec_num, nucl_num,
+                        elec_coord, elec_num * walk_num,
+                        nucl_coord, nucl_num,
+                        en_distance, elec_num) != QMCKL_SUCCESS){
+      return QMCKL_FAILURE;
+    }
+  }
+  return QMCKL_SUCCESS;
+}
+
+   #+end_src
+
+    #+begin_src c :tangle (eval h_private_func) :comments org :exports none
+qmckl_exit_code qmckl_compute_en_distance_c (
+          const qmckl_context context,
+          const int64_t elec_num,
+          const int64_t nucl_num,
+          const int64_t walk_num,
+          const double* elec_coord,
+          const double* nucl_coord,
+          double* const en_distance );
     #+end_src
 
     #+begin_src c :tangle (eval h_private_func) :comments org :exports none
