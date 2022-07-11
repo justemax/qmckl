@@ -63,7 +63,6 @@ int main() {
 #include "qmckl_memory_private_type.h"
 #include "qmckl_memory_private_func.h"
 #include "qmckl_electron_private_func.h"
-#include "qmckl_distance_func.h"
   #+end_src
 
 * Context
@@ -1031,8 +1030,9 @@ qmckl_exit_code qmckl_provide_ee_distance(qmckl_context context)
       ctx->electron.ee_distance = ee_distance;
     }
 
+    //CALL C COMPUTE EE
     qmckl_exit_code rc =
-      qmckl_compute_ee_distance(context,
+      qmckl_compute_ee_distance_c(context,
                                 ctx->electron.num,
                                 ctx->electron.walk_num,
                                 ctx->electron.coord_new.data,
@@ -1129,11 +1129,17 @@ qmckl_exit_code qmckl_compute_ee_distance_c (
     return QMCKL_INVALID_ARG_3;
   }
 
-  for(int k = 0; k < walk_num; k++){
+  printf("walk num number = %d", walk_num);
+  for(int k = 0; k < walk_num; k++){/*
     if(qmckl_distance_c(context, 'T', 'T', elec_num, elec_num,
                         coord, elec_num*walk_num,
                         coord, elec_num*walk_num,
-                        ee_distance, elec_num) != QMCKL_SUCCESS){
+                        ee_distance, elec_num) != QMCKL_SUCCESS){*/
+
+    if(qmckl_distance_c(context, 'T', 'T', elec_num, elec_num,
+                        &coord[0 * 3 * walk_num + k * walk_num + 0], elec_num*walk_num,
+                        &coord[0 * 3 * walk_num + k * walk_num + 0], elec_num*walk_num,
+                        &ee_distance[k * elec_num * elec_num + 0 * elec_num + 0], elec_num) != QMCKL_SUCCESS){
       return QMCKL_FAILURE;
     }
   }
@@ -2122,8 +2128,8 @@ qmckl_exit_code qmckl_compute_en_distance_c (
 
   for(int i = 0; i < walk_num; i++){
     if(qmckl_distance_c(context, 'T', 'T', elec_num, nucl_num,
-                        elec_coord, elec_num * walk_num,
-                        nucl_coord, nucl_num,
+                        &elec_coord, elec_num * walk_num,
+                        &nucl_coord, nucl_num,
                         en_distance, elec_num) != QMCKL_SUCCESS){
       return QMCKL_FAILURE;
     }
