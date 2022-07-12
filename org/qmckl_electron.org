@@ -1137,8 +1137,8 @@ qmckl_exit_code qmckl_compute_ee_distance_c (
                         ee_distance, elec_num) != QMCKL_SUCCESS){*/
 
     if(qmckl_distance_c(context, 'T', 'T', elec_num, elec_num,
-                        &coord[0 * 3 * walk_num + k * walk_num + 0], elec_num*walk_num,
-                        &coord[0 * 3 * walk_num + k * walk_num + 0], elec_num*walk_num,
+                        &coord[0 * 3 * elec_num + k * elec_num + 0], elec_num*walk_num,
+                        &coord[0 * 3 * elec_num + k * elec_num + 0], elec_num*walk_num,
                         &ee_distance[k * elec_num * elec_num + 0 * elec_num + 0], elec_num) != QMCKL_SUCCESS){
       return QMCKL_FAILURE;
     }
@@ -1230,9 +1230,11 @@ rc = qmckl_get_electron_ee_distance(context, ee_distance);
 assert(ee_distance[0] == 0.);
 
 // (1,0,0) == (0,1,0)
+printf("ee_distance[elec_num] = %lf\n", ee_distance[elec_num]);
 assert(ee_distance[1] == ee_distance[elec_num]);
 
 // value of (1,0,0)
+printf("ee_distance[1] = %lf\n", ee_distance[1]);
 assert(fabs(ee_distance[1]-7.152322512964209) < 1.e-12);
 
 // (0,0,1) == 0.
