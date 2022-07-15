@@ -1137,8 +1137,8 @@ qmckl_exit_code qmckl_compute_ee_distance_c (
                         ee_distance, elec_num) != QMCKL_SUCCESS){*/
 
     if(qmckl_distance_c(context, 'T', 'T', elec_num, elec_num,
-                        &coord[0 * 3 * elec_num + k * elec_num + 0], elec_num*walk_num,
-                        &coord[0 * 3 * elec_num + k * elec_num + 0], elec_num*walk_num,
+                        &coord[0 * walk_num * elec_num + k * elec_num + 0], elec_num*walk_num,
+                        &coord[0 * walk_num * elec_num + k * elec_num + 0], elec_num*walk_num,
                         &ee_distance[k * elec_num * elec_num + 0 * elec_num + 0], elec_num) != QMCKL_SUCCESS){
       return QMCKL_FAILURE;
     }
