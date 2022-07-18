@@ -4296,6 +4296,8 @@ integer function qmckl_compute_factor_een_rescaled_e_deriv_e_f( &
           een_rescaled_e_deriv_e(i, 3, j, l, nw) = kappa_l * elec_dist_deriv_e(3, i, j)
           een_rescaled_e_deriv_e(i, 4, j, l, nw) = kappa_l * elec_dist_deriv_e(4, i, j)
 
+          print *, een_rescaled_e_deriv_e(i, 1, j, l, nw);
+
           een_rescaled_e_deriv_e(i, 4, j, l, nw) = een_rescaled_e_deriv_e(i, 4, j, l, nw)              &
                     + een_rescaled_e_deriv_e(i, 1, j, l, nw) * een_rescaled_e_deriv_e(i, 1, j, l, nw)  &
                     + een_rescaled_e_deriv_e(i, 2, j, l, nw) * een_rescaled_e_deriv_e(i, 2, j, l, nw)  &
@@ -4374,15 +4376,16 @@ qmckl_exit_code qmckl_compute_factor_een_rescaled_e_deriv_e_c (
   }
 
   //een_rescaled_e_deriv_e = 0;
+  printf("elec dist check \n");
 
   for(int nw = 0; nw < walk_num; nw++){
     for(int j = 0; j < elec_num; j++){
       for(int i = 0; i < elec_num; i++){
         rij_inv = 1/ee_distance[nw * elec_num * elec_num + j *elec_num + i];
         for(int ii=0; ii < 3; ii++){
-          //printf("1 %lf\n",elec_dist_deriv_e[j*elec_num * 4 + i * 4 + ii]);
-          //printf("%lf\n",coord_new[nw * 3 *elec_num + ii * elec_num + i]);
           elec_dist_deriv_e[j*elec_num * 4 + i * 4 + ii] = (coord_new[nw * 3 *elec_num + ii * elec_num + i] - coord_new[nw * 3 *elec_num + ii * elec_num + j]) * rij_inv;
+
+          printf("%lf \n", elec_dist_deriv_e[j*elec_num * 4 + i * 4 + ii]);
         }
         elec_dist_deriv_e[j*elec_num*4 + i*4 + 3] = 2 * rij_inv;
       }
@@ -4393,25 +4396,46 @@ qmckl_exit_code qmckl_compute_factor_een_rescaled_e_deriv_e_c (
     }
 
 
-    for(int l=0; l < cord_num; l++){
+    for(int l=1; l < cord_num+1; l++){
       kappa_l = l * rescale_factor_kappa_ee;
+      printf("kappa = %lf\n", kappa_l);
       for(int j=0; j < elec_num; j++){
         for(int i=0; i < elec_num ; i++){
-          een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] = kappa_l * elec_dist_deriv_e[j * elec_num * 4];
-          een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 1 * elec_num + i] = kappa_l * elec_dist_deriv_e[j * elec_num * 4];
-          een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 2 * elec_num + i] = kappa_l * elec_dist_deriv_e[j * elec_num * 4];
-          een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] = kappa_l * elec_dist_deriv_e[j * elec_num * 4];
 
-          een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] = een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] * een_rescaled_e[nw * cord_num * elec_num * elec_num + l * elec_num * elec_num + j * elec_num + i];
-          een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 1 * elec_num + i] = een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 1 * elec_num + i] * een_rescaled_e[nw * cord_num * elec_num * elec_num + l * elec_num * elec_num + j * elec_num + i];
-          een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 2 * elec_num + i] = een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 2 * elec_num + i] * een_rescaled_e[nw * cord_num * elec_num * elec_num + l * elec_num * elec_num + j * elec_num + i];
-          een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] = een_rescaled_e_deriv_e[nw * cord_num * elec_num * 4 * elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] * een_rescaled_e[nw * cord_num * elec_num * elec_num + l * elec_num * elec_num + j * elec_num + i];
 
+          een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] = kappa_l * elec_dist_deriv_e[i * elec_num * 4 + j * 4 + 0];
+
+          printf("%lf",elec_dist_deriv_e[i * elec_num * 4 + j * 4 + 0]);
+          printf("\n %lf \n",  een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] );
+
+          een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 1 * elec_num + i] = \
+            kappa_l * elec_dist_deriv_e[i * elec_num * 4 + j * 4 + 1];
+
+          een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 2 * elec_num + i] = \
+            kappa_l * elec_dist_deriv_e[i * elec_num * 4 + j * 4 + 2];
+
+          een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] = \
+            kappa_l * elec_dist_deriv_e[i * elec_num * 4 + j * 4 + 3];
+
+
+
+          een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] = \
+            een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] + \
+            een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] * een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] \
+             + een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 1 * elec_num + i] * een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 1 * elec_num + i] \
+             + een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 2 * elec_num + i] * een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 2 * elec_num + i];
+
+
+          een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] = een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] * een_rescaled_e[nw * cord_num+1 *elec_num * elec_num + l * elec_num * elec_num + j *elec_num + i];
+          een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 1 * elec_num + i] = een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 1 * elec_num + i] * een_rescaled_e[nw * cord_num+1 *elec_num * elec_num + l * elec_num * elec_num + j *elec_num + i];
+          een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 2 * elec_num + i] = een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 2 * elec_num + i] * een_rescaled_e[nw * cord_num+1 *elec_num * elec_num + l * elec_num * elec_num + j *elec_num + i];
+          een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] = een_rescaled_e_deriv_e[nw * cord_num+1 * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] * een_rescaled_e[nw * cord_num+1 *elec_num * elec_num + l * elec_num * elec_num + j *elec_num + i];
 
         }
       }
     }
   }
+  printf("%lf \n", een_rescaled_e_deriv_e[0 * cord_num + 1 * elec_num * 4 * elec_num + 1 * elec_num * 4 * elec_num + 0 + 0 + 2]);
 
   return QMCKL_SUCCESS;
 
