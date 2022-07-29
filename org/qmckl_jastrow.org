@@ -3656,6 +3656,7 @@ qmckl_exit_code qmckl_provide_een_rescaled_e(qmckl_context context)
   qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
   assert (ctx != NULL);
 
+  printf("inside provide een rescaled e juste avant distance\n");
   /* Check if ee distance is provided */
   qmckl_exit_code rc = qmckl_provide_ee_distance(context);
   if(rc != QMCKL_SUCCESS) return rc;
@@ -3697,6 +3698,69 @@ qmckl_exit_code qmckl_provide_een_rescaled_e(qmckl_context context)
   return QMCKL_SUCCESS;
 }
     #+end_src
+
+
+
+    #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :exports none
+qmckl_exit_code qmckl_provide_een_rescaled_e_device(qmckl_context context, int device_id);
+    #+end_src
+
+    #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+qmckl_exit_code qmckl_provide_een_rescaled_e_device(qmckl_context context, int device_id)
+{
+
+  if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+    return QMCKL_NULL_CONTEXT;
+  }
+
+  qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  assert (ctx != NULL);
+
+  printf("inside provide een rescaled e juste avant distance\n");
+  /* Check if ee distance is provided */
+  qmckl_exit_code rc = qmckl_provide_ee_distance_device(context, device_id);
+  if(rc != QMCKL_SUCCESS) return rc;
+
+  /* Compute if necessary */
+  if (ctx->date > ctx->jastrow.een_rescaled_e_date) {
+
+    /* Allocate array */
+    if (ctx->jastrow.een_rescaled_e == NULL) {
+
+      qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
+      mem_info.size = ctx->electron.num * ctx->electron.num *
+        ctx->electron.walk_num * (ctx->jastrow.cord_num + 1) * sizeof(double);
+      double* een_rescaled_e = (double*) qmckl_malloc_device(context, mem_info, device_id);
+
+      if (een_rescaled_e == NULL) {
+        return qmckl_failwith( context,
+                               QMCKL_ALLOCATION_FAILED,
+                               "qmckl_een_rescaled_e",
+                               NULL);
+      }
+      ctx->jastrow.een_rescaled_e = een_rescaled_e;
+    }
+
+    rc = qmckl_compute_een_rescaled_e(context,
+                                      ctx->electron.walk_num,
+                                      ctx->electron.num,
+                                      ctx->jastrow.cord_num,
+                                      ctx->electron.rescale_factor_kappa_ee,
+                                      ctx->electron.ee_distance,
+                                      ctx->jastrow.een_rescaled_e);
+    if (rc != QMCKL_SUCCESS) {
+      return rc;
+    }
+
+    ctx->jastrow.een_rescaled_e_date = ctx->date;
+  }
+
+  return QMCKL_SUCCESS;
+}
+    #+end_src
+
+
+
 
 *** Compute
    :PROPERTIES:
@@ -4163,7 +4227,6 @@ qmckl_exit_code qmckl_provide_een_rescaled_e_deriv_e(qmckl_context context)
   assert (ctx != NULL);
 
   /* Check if ee distance is provided */
-printf("avant provide een rescaled e\n");
   qmckl_exit_code rc = qmckl_provide_een_rescaled_e(context);
   if(rc != QMCKL_SUCCESS) return rc;
 
@@ -4187,7 +4250,6 @@ printf("avant provide een rescaled e\n");
       ctx->jastrow.een_rescaled_e_deriv_e = een_rescaled_e_deriv_e;
     }
     //CHANGE ICI POUR DERIV
-    printf("Go qmckl compute factor \n\n");
 
     rc = qmckl_compute_factor_een_rescaled_e_deriv_e_c(context,
                                                      ctx->electron.walk_num,
@@ -4354,7 +4416,6 @@ qmckl_exit_code qmckl_compute_factor_een_rescaled_e_deriv_e_c (
                                                                const double* een_rescaled_e,
                                                                double* const een_rescaled_e_deriv_e ){
 
-  printf("Inside compute factor\n");
 
   double rij_inv, kappa_l;
 
@@ -4378,8 +4439,6 @@ qmckl_exit_code qmckl_compute_factor_een_rescaled_e_deriv_e_c (
     return QMCKL_INVALID_ARG_4;
   }
 
-  //een_rescaled_e_deriv_e = 0;
-  printf("elec dist check \n");
 
   for(int nw = 0; nw < walk_num; nw++){
     for(int j = 0; j < elec_num; j++){
@@ -4388,12 +4447,8 @@ qmckl_exit_code qmckl_compute_factor_een_rescaled_e_deriv_e_c (
         for(int ii=0; ii < 3; ii++){
           elec_dist_deriv_e[j*elec_num * 4 + i * 4 + ii] = (coord_new[nw * 3 *elec_num + ii * elec_num + i] - coord_new[nw * 3 *elec_num + ii * elec_num + j]) * rij_inv;
 
-          //printf("%lf \n", elec_dist_deriv_e[j*elec_num * 4 + i * 4 + ii]);
-          // OK LE VALEURS SONT OK ICI
         }
         elec_dist_deriv_e[j*elec_num*4 + i*4 + 3] = 2 * rij_inv;
-        //printf("%lf\n",elec_dist_deriv_e[j*elec_num*4 + i*4 + 3]);
-        // Valeur ok ici aussi
       }
       elec_dist_deriv_e[j*elec_num*4 + j*4 + 0] = 0;
       elec_dist_deriv_e[j*elec_num*4 + j*4 + 1] = 0;
@@ -4404,12 +4459,10 @@ qmckl_exit_code qmckl_compute_factor_een_rescaled_e_deriv_e_c (
 
     for(int l=1; l < cord_num+1; l++){
       kappa_l = - l * rescale_factor_kappa_ee;
-      //OK KAPPA
       for(int j=0; j < elec_num; j++){
         for(int i=0; i < elec_num ; i++){
 
 
-          //OK EEN_RESCALED
           een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] = kappa_l * elec_dist_deriv_e[j * elec_num * 4 + i * 4 + 0];
 
 
@@ -4422,20 +4475,13 @@ qmckl_exit_code qmckl_compute_factor_een_rescaled_e_deriv_e_c (
           een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] = \
             kappa_l * elec_dist_deriv_e[j * elec_num * 4 + i * 4 + 3];
 
-         //printf("%lf \n",  een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] );
 
-          // OK FIRST EEN_RESCALED
 
           een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] = \
             een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] \
              + een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] * een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] \
              + een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 1 * elec_num + i] * een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 1 * elec_num + i] \
              + een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 2 * elec_num + i] * een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 2 * elec_num + i];
-
-
-          //OK mega calcul de ses moort la
-          //printf("%lf\n",  een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i]);
-
 
 
           een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] = een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 0 * elec_num + i] * een_rescaled_e[nw * ((cord_num+1)) * elec_num * elec_num + l * elec_num * elec_num + j * elec_num + i];
@@ -4447,8 +4493,6 @@ qmckl_exit_code qmckl_compute_factor_een_rescaled_e_deriv_e_c (
           een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] = een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i] * een_rescaled_e[nw * ((cord_num+1)) * elec_num * elec_num + l * elec_num * elec_num + j * elec_num + i];
 
 
-          printf("%lf\n",een_rescaled_e_deriv_e[nw * (cord_num+1) * elec_num * 4 *elec_num + l * elec_num * 4 * elec_num + j * 4 * elec_num + 3 * elec_num + i]);
-          //printf("%lf\n", een_rescaled_e[nw * ((cord_num+1)) * elec_num * elec_num + l * elec_num * elec_num + j * elec_num + i]);
 
 
         }
@@ -8155,6 +8199,7 @@ qmckl_get_jastrow_factor_een_deriv_e(qmckl_context context,
   }
 
   qmckl_exit_code rc;
+  printf("Factor een deric\n");
 
   rc = qmckl_provide_factor_een_deriv_e(context);
   if (rc != QMCKL_SUCCESS) return rc;
@@ -8197,15 +8242,18 @@ qmckl_get_jastrow_factor_een_deriv_e_device(qmckl_context context,
   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
     return QMCKL_NULL_CONTEXT;
   }
+  printf("Go device ptr jastrow brrrrrr\n");
+
 
   qmckl_exit_code rc;
 
-  rc = qmckl_provide_factor_een_deriv_e(context);
+  rc = qmckl_provide_factor_een_deriv_e_device(context, device_id);
   if (rc != QMCKL_SUCCESS) return rc;
 
   qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
   assert (ctx != NULL);
 
+  printf("%p\n", ctx->electron.coord_new);
   int64_t sze = ctx->electron.walk_num * 4 * ctx->electron.num;
   if (size_max < sze) {
     return qmckl_failwith( context,
@@ -8294,6 +8342,106 @@ qmckl_exit_code qmckl_provide_factor_een_deriv_e(qmckl_context context)
     }
 
     rc = qmckl_compute_factor_een_deriv_e(context,
+                                          ctx->electron.walk_num,
+                                          ctx->electron.num,
+                                          ctx->nucleus.num,
+                                          ctx->jastrow.cord_num,
+                                          ctx->jastrow.dim_cord_vect,
+                                          ctx->jastrow.cord_vect_full,
+                                          ctx->jastrow.lkpm_combined_index,
+                                          ctx->jastrow.tmp_c,
+                                          ctx->jastrow.dtmp_c,
+                                          ctx->jastrow.een_rescaled_n,
+                                          ctx->jastrow.een_rescaled_n_deriv_e,
+                                          ctx->jastrow.factor_een_deriv_e);
+    if (rc != QMCKL_SUCCESS) {
+      return rc;
+    }
+
+    ctx->jastrow.factor_een_deriv_e_date = ctx->date;
+  }
+
+  return QMCKL_SUCCESS;
+}
+    #+end_src
+
+
+**Device pointer
+
+    #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :exports none
+qmckl_exit_code qmckl_provide_factor_een_deriv_e_device(qmckl_context context, int device_id);
+    #+end_src
+
+    #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+qmckl_exit_code qmckl_provide_factor_een_deriv_e_device(qmckl_context context, int device_id)
+{
+
+  qmckl_exit_code rc;
+  printf("Debut qmckl provide factor een deriv e device\n");
+
+  if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+    return QMCKL_NULL_CONTEXT;
+  }
+
+  qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  assert (ctx != NULL);
+
+  /* Check if en rescaled distance is provided */
+  rc = qmckl_provide_een_rescaled_e_device(context, device_id);
+  if(rc != QMCKL_SUCCESS) return rc;
+
+  /* Check if en rescaled distance derivatives is provided */
+  rc = qmckl_provide_een_rescaled_n(context);
+  if(rc != QMCKL_SUCCESS) return rc;
+
+  /* Check if en rescaled distance is provided */
+  rc = qmckl_provide_een_rescaled_e_deriv_e(context);
+  if(rc != QMCKL_SUCCESS) return rc;
+
+  /* Check if en rescaled distance derivatives is provided */
+  rc = qmckl_provide_een_rescaled_n_deriv_e(context);
+  if(rc != QMCKL_SUCCESS) return rc;
+
+  /* Check if en rescaled distance derivatives is provided */
+  rc = qmckl_provide_cord_vect_full(context);
+  if(rc != QMCKL_SUCCESS) return rc;
+
+  /* Check if en rescaled distance derivatives is provided */
+  printf("Before lkpm provide\n");
+  rc = qmckl_provide_lkpm_combined_index(context);
+  printf("lkpm provide done\n");
+  if(rc != QMCKL_SUCCESS) return rc;
+
+  /* Check if tmp_c is provided */
+  rc = qmckl_provide_tmp_c(context);
+  if(rc != QMCKL_SUCCESS) return rc;
+
+  /* Check if dtmp_c is provided */
+  rc = qmckl_provide_dtmp_c(context);
+  if(rc != QMCKL_SUCCESS) return rc;
+
+  /* Compute if necessary */
+  if (ctx->date > ctx->jastrow.factor_een_deriv_e_date) {
+
+    /* Allocate array */
+    if (ctx->jastrow.factor_een_deriv_e == NULL) {
+
+      qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
+      mem_info.size = 4 * ctx->electron.num * ctx->electron.walk_num * sizeof(double);
+      double* factor_een_deriv_e = (double*) qmckl_malloc_device(context, mem_info, device_id);
+
+      if (factor_een_deriv_e == NULL) {
+        return qmckl_failwith( context,
+                               QMCKL_ALLOCATION_FAILED,
+                               "qmckl_provide_factor_een_deriv_e",
+                               NULL);
+      }
+      ctx->jastrow.factor_een_deriv_e = factor_een_deriv_e;
+    }
+
+
+    printf("Call compute factor een deriv e c \n");
+    rc = qmckl_compute_factor_een_deriv_e_c(context,
                                           ctx->electron.walk_num,
                                           ctx->electron.num,
                                           ctx->nucleus.num,
@@ -8703,6 +8851,106 @@ end function qmckl_compute_factor_een_deriv_e_f
          factor_een_deriv_e)
 
     end function qmckl_compute_factor_een_deriv_e
+    #+end_src
+
+    #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :exports none
+    qmckl_exit_code qmckl_compute_factor_een_deriv_e_c (
+      const qmckl_context context,
+      const int64_t walk_num,
+      const int64_t elec_num,
+      const int64_t nucl_num,
+      const int64_t cord_num,
+      const int64_t dim_cord_vect,
+      const double* cord_vect_full,
+      const int64_t* lkpm_combined_index,
+      const double* tmp_c,
+      const double* dtmp_c,
+      const double* een_rescaled_n,
+      const double* een_rescaled_n_deriv_e,
+      double* const factor_een_deriv_e );
+    #+end_src
+
+    #+begin_src c :comments org :tangle (eval c) :noweb yes :exports none
+    qmckl_exit_code qmckl_compute_factor_een_deriv_e_c (
+      const qmckl_context context,
+      const int64_t walk_num,
+      const int64_t elec_num,
+      const int64_t nucl_num,
+      const int64_t cord_num,
+      const int64_t dim_cord_vect,
+      const double* cord_vect_full,
+      const int64_t* lkpm_combined_index,
+      const double* tmp_c,
+      const double* dtmp_c,
+      const double* een_rescaled_n,
+      const double* een_rescaled_n_deriv_e,
+      double* const factor_een_deriv_e ){
+
+
+      printf("appel de la version c\n");
+      int l,k,p,m;
+      double accu, accu2, cn;
+
+      if(context == QMCKL_NULL_CONTEXT){
+        return QMCKL_INVALID_CONTEXT;
+      }
+
+      if(walk_num < 0){
+        return QMCKL_INVALID_ARG_2;
+      }
+
+      if(elec_num < 0){
+        return QMCKL_INVALID_ARG_3;
+      }
+
+      if(nucl_num < 0){
+        return QMCKL_INVALID_ARG_4;
+      }
+
+      if(cord_num < 0){
+        return QMCKL_INVALID_ARG_5;
+      }
+
+
+
+      for(int nw = 0; nw < walk_num; nw++){
+        for(int n =0; n < dim_cord_vect; n++){
+          l = lkpm_combined_index[0 * dim_cord_vect + n];
+          k = lkpm_combined_index[1 * dim_cord_vect + n];
+          p = lkpm_combined_index[2 * dim_cord_vect + n];
+          m = lkpm_combined_index[3 * dim_cord_vect + n];
+
+
+          for(int a = 1; a < nucl_num; a++){
+            cn = cord_vect_full[n * dim_cord_vect + a];
+            if (cn != 0){
+             for(int ii = 0; ii < 4; ii++){
+               for(int j = 0; j < elec_num; j++){
+                 factor_een_deriv_e[nw * 4 * elec_num + ii * elec_num + j] = factor_een_deriv_e[nw * 4 * elec_num + ii * elec_num + j] \
+                   + tmp_c[nw * cord_num * (cord_num + 1) * nucl_num * elec_num + k * (cord_num + 1) * nucl_num * elec_num + m * nucl_num * elec_num + a * elec_num + j]    * een_rescaled_n_deriv_e[nw * (cord_num  + 1) * nucl_num * 4 * elec_num + (m+l) * nucl_num * 4 * elec_num + a * 4 * elec_num + ii * elec_num + j]    + dtmp_c[nw * cord_num * (cord_num +1) * nucl_num * 4 * elec_num + k * (cord_num + 1) * nucl_num * 4 * elec_num + (m) * nucl_num * 4 * elec_num + a * 4 * elec_num + ii * elec_num + j]    * een_rescaled_n[nw * (cord_num + 1) * nucl_num * elec_num + m * nucl_num * elec_num + a * elec_num + j]    + tmp_c[nw * cord_num * (cord_num + 1) * nucl_num * elec_num + k * (cord_num + 1) * nucl_num * elec_num + m * nucl_num * elec_num + a * elec_num + j] *    een_rescaled_n[nw * (cord_num  + 1) * nucl_num * 4 * elec_num + m * nucl_num * 4 * elec_num + a * 4 * elec_num + ii * elec_num + j] * cn;
+               }
+             }
+
+             cn = cn + cn;
+             for(int j=0; j < elec_num ; j++){
+               factor_een_deriv_e[nw * 4 * elec_num + 4 * elec_num + j] = factor_een_deriv_e[nw * 4 * elec_num + 4 * elec_num + j] \
+                   + dtmp_c[nw * cord_num * (cord_num +1) * nucl_num * 4 * elec_num + k * (cord_num + 1) * nucl_num * 4 * elec_num + (m+l) * nucl_num * 4 * elec_num + a * 4 * elec_num + 0 * elec_num + j] *   een_rescaled_n_deriv_e[nw * (cord_num  + 1) * nucl_num * 4 * elec_num + (m+l) * nucl_num * 4 * elec_num + a * 4 * elec_num + 0 * elec_num + j]\
+                  + dtmp_c[nw * cord_num * (cord_num +1) * nucl_num * 4 * elec_num + k * (cord_num + 1) * nucl_num * 4 * elec_num + (m+l) * nucl_num * 4 * elec_num + a * 4 * elec_num + 1 * elec_num + j] *   een_rescaled_n_deriv_e[nw * (cord_num  + 1) * nucl_num * 4 * elec_num + (m+l) * nucl_num * 4 * elec_num + a * 4 * elec_num + 1 * elec_num + j]\
+                  + dtmp_c[nw * cord_num * (cord_num +1) * nucl_num * 4 * elec_num + k * (cord_num + 1) * nucl_num * 4 * elec_num + (m+l) * nucl_num * 4 * elec_num + a * 4 * elec_num + 2 * elec_num + j] *   een_rescaled_n_deriv_e[nw * (cord_num  + 1) * nucl_num * 4 * elec_num + (m+l) * nucl_num * 4 * elec_num + a * 4 * elec_num + 2 * elec_num + j]\
+                 + dtmp_c[nw * cord_num * (cord_num +1) * nucl_num * 4 * elec_num + k * (cord_num + 1) * nucl_num * 4 * elec_num + (m) * nucl_num * 4 * elec_num + a * 4 * elec_num + 0 * elec_num + j] *   een_rescaled_n_deriv_e[nw * (cord_num  + 1) * nucl_num * 4 * elec_num + (m+l) * nucl_num * 4 * elec_num + a * 4 * elec_num + 0 * elec_num + j]\
+                  + dtmp_c[nw * cord_num * (cord_num +1) * nucl_num * 4 * elec_num + k * (cord_num + 1) * nucl_num * 4 * elec_num + (m) * nucl_num * 4 * elec_num + a * 4 * elec_num + 1 * elec_num + j] *   een_rescaled_n_deriv_e[nw * (cord_num  + 1) * nucl_num * 4 * elec_num + (m+l) * nucl_num * 4 * elec_num + a * 4 * elec_num + 1 * elec_num + j]\
+                  + dtmp_c[nw * cord_num * (cord_num +1) * nucl_num * 4 * elec_num + k * (cord_num + 1) * nucl_num * 4 * elec_num + (m) * nucl_num * 4 * elec_num + a * 4 * elec_num + 2 * elec_num + j] *   een_rescaled_n_deriv_e[nw * (cord_num  + 1) * nucl_num * 4 * elec_num + (m+l) * nucl_num * 4 * elec_num + a * 4 * elec_num + 2 * elec_num + j] * cn;
+
+
+             }
+            }
+          }
+        }
+      }
+
+
+
+      }
     #+end_src
 
 *** Test
