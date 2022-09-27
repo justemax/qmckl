@@ -1,0 +1,428 @@
+			  ___________________
+
+			   MEMORY MANAGEMENT
+
+				TREX CoE
+			  ___________________
+
+
+Table of Contents
+_________________
+
+1. Memory data structure for the context
+2. Passing info to allocation routines
+3. Allocation/deallocation functions
+4. Get the size of a memory block
+
+
+
+
+
+1 Memory data structure for the context
+=======================================
+
+  Every time a new block of memory is allocated, the information
+  relative to the allocation is stored in a new
+  `qmckl_memory_info_struct'.  A `qmckl_memory_info_struct' contains the
+  pointer to the memory block, its size in bytes, and extra
+  implementation-specific information such as alignment, pinning, if the
+  memory should be allocated on CPU or GPU /etc/.
+
+  ,----
+  | typedef struct qmckl_memory_info_struct {
+  |   size_t size;
+  |   void*  pointer;
+  | } qmckl_memory_info_struct;
+  | 
+  | static const qmckl_memory_info_struct qmckl_memory_info_struct_zero =
+  |   {
+  |    .size = (size_t) 0,
+  |    .pointer = NULL
+  |   };
+  `----
+
+  The `memory' element of the context is a data structure which contains
+  an array of `qmckl_memory_info_struct', the size of the array, and the
+  number of allocated blocks.
+
+  ,----
+  | typedef struct qmckl_memory_struct {
+  |   size_t                    n_allocated;
+  |   size_t                    array_size;
+  |   qmckl_memory_info_struct* element;
+  | } qmckl_memory_struct;
+  `----
+
+
+2 Passing info to allocation routines
+=====================================
+
+  Passing information to the allocation routine should be done by
+  passing an instance of a `qmckl_memory_info_struct'.
+
+
+3 Allocation/deallocation functions
+===================================
+
+  Memory allocation inside the library should be done with
+  `qmckl_malloc'. It lets the library choose how the memory will be
+  allocated, and a pointer is returned to the user.  The context is
+  passed to let the library store data related to the allocation inside
+  the context. In this particular implementation of the library, we
+  store a list of allocated pointers so that all the memory can be
+  properly freed when the library is de-initialized.  If the allocation
+  failed, the `NULL' pointer is returned.
+
+  ,----
+  | void* qmckl_malloc(qmckl_context context,
+  | 		   const qmckl_memory_info_struct info);
+  `----
+
+  ,----
+  | #ifdef HAVE_DEVICE_POINTERS
+  | void* qmckl_malloc_device(qmckl_context context,
+  | 			  const qmckl_memory_info_struct info,
+  | 				int device_id);
+  | #endif
+  `----
+
+  ,----
+  | void* qmckl_malloc(qmckl_context context, const qmckl_memory_info_struct info) {
+  | 
+  |   assert (qmckl_context_check(context) != QMCKL_NULL_CONTEXT);
+  | 
+  |   qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  | 
+  |   /* Allocate memory and zero it */
+  | #ifdef HAVE_HPC
+  |   void * pointer = aligned_alloc(64, ((info.size+64) >> 6) << 6 );
+  | #else
+  |   void * pointer = malloc(info.size);
+  | #endif
+  |   if (pointer == NULL) {
+  |     return NULL;
+  |   }
+  |   memset(pointer, 0, info.size);
+  | 
+  |   qmckl_lock(context);
+  |   {
+  |     /* If qmckl_memory_struct is full, reallocate a larger one */
+  |     if (ctx->memory.n_allocated == ctx->memory.array_size) {
+  |       const size_t old_size = ctx->memory.array_size;
+  |       qmckl_memory_info_struct * new_array = realloc(ctx->memory.element,
+  | 							  2L * old_size *
+  | 							  sizeof(qmckl_memory_info_struct));
+  |       if (new_array == NULL) {
+  | 	qmckl_unlock(context);
+  | 	free(pointer);
+  | 	return NULL;
+  |       }
+  | 
+  |       memset( &(new_array[old_size]), 0, old_size * sizeof(qmckl_memory_info_struct) );
+  |       ctx->memory.element = new_array;
+  |       ctx->memory.array_size = 2L * old_size;
+  |     }
+  | 
+  |     /* Find first NULL entry */
+  |     size_t pos = (size_t) 0;
+  |     while ( pos < ctx->memory.array_size && ctx->memory.element[pos].size > (size_t) 0) {
+  |       pos += (size_t) 1;
+  |     }
+  |     assert (ctx->memory.element[pos].size == (size_t) 0);
+  | 
+  |     /* Copy info at the new location */
+  |     memcpy(&(ctx->memory.element[pos]), &info, sizeof(qmckl_memory_info_struct));
+  |     ctx->memory.element[pos].pointer = pointer;
+  |     ctx->memory.n_allocated += (size_t) 1;
+  |   }
+  |   qmckl_unlock(context);
+  | 
+  |   return pointer;
+  | }
+  `----
+
+  ,----
+  | #ifdef HAVE_DEVICE_POINTERS
+  | void* qmckl_malloc_device(qmckl_context context, const qmckl_memory_info_struct info, int device_id) {
+  | 
+  |   assert (qmckl_context_check(context) != QMCKL_NULL_CONTEXT);
+  | 
+  |   qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  | 
+  |   /* Allocate memory and zero it */
+  |   void * pointer = omp_target_alloc(info.size, device_id);
+  |   if (pointer == NULL) {
+  |     return NULL;
+  |   }
+  | 
+  |   // TODO
+  |   // Memset to 0 of size info.size
+  |   // memset(pointer, 0, info.size);
+  | 
+  | 
+  |   qmckl_lock(context);
+  |   {
+  |     /* If qmckl_memory_struct is full, reallocate a larger one */
+  |     if (ctx->memory.n_allocated == ctx->memory.array_size) {
+  |       const size_t old_size = ctx->memory.array_size;
+  |       qmckl_memory_info_struct * new_array = realloc(ctx->memory.element,
+  | 							  2L * old_size *
+  | 							  sizeof(qmckl_memory_info_struct));
+  |       if (new_array == NULL) {
+  | 	qmckl_unlock(context);
+  | 	free(pointer);
+  | 	return NULL;
+  |       }
+  | 
+  |       memset( &(new_array[old_size]), 0, old_size * sizeof(qmckl_memory_info_struct) );
+  |       ctx->memory.element = new_array;
+  |       ctx->memory.array_size = 2L * old_size;
+  |     }
+  | 
+  |     /* Find first NULL entry */
+  |     size_t pos = (size_t) 0;
+  |     while ( pos < ctx->memory.array_size && ctx->memory.element[pos].size > (size_t) 0) {
+  |       pos += (size_t) 1;
+  |     }
+  |     assert (ctx->memory.element[pos].size == (size_t) 0);
+  | 
+  |     /* Copy info at the new location */
+  |     ctx->memory.element[pos].size    = info.size;
+  |     ctx->memory.element[pos].pointer = pointer;
+  |     ctx->memory.n_allocated += (size_t) 1;
+  |   }
+  |   qmckl_unlock(context);
+  | 
+  |   return pointer;
+  | }
+  | #endif
+  `----
+
+  ,----
+  | /* Create a context */
+  | qmckl_context context = qmckl_context_create();
+  | 
+  | qmckl_memory_info_struct info = qmckl_memory_info_struct_zero;
+  | info.size = (size_t) 3*sizeof(int);
+  | 
+  | /* Allocate an array of ints */
+  | int *a = (int*) qmckl_malloc(context, info);
+  | 
+  | /* Check that array of ints is OK */
+  | assert(a != NULL);
+  | a[0] = 1;  assert(a[0] == 1);
+  | a[1] = 2;  assert(a[1] == 2);
+  | a[2] = 3;  assert(a[2] == 3);
+  | 
+  | /* Allocate another array of ints */
+  | int *b = (int*) qmckl_malloc(context, info);
+  | 
+  | /* Check that array of ints is OK */
+  | assert(b != NULL);
+  | b[0] = 1;  assert(b[0] == 1);
+  | b[1] = 2;  assert(b[1] == 2);
+  | b[2] = 3;  assert(b[2] == 3);
+  `----
+
+  When freeing the memory with `qmckl_free', the context is passed, in
+  case some important information has been stored related to memory
+  allocation and needs to be updated.
+
+  ,----
+  | qmckl_exit_code qmckl_free(qmckl_context context,
+  | 			   void * const ptr);
+  `----
+
+  ,----
+  | #ifdef HAVE_DEVICE_POINTERS
+  | qmckl_exit_code qmckl_free_device(qmckl_context context,
+  | 				  void * const ptr,
+  | 					int device_id);
+  | #endif
+  `----
+
+
+  ,----
+  | qmckl_exit_code qmckl_free(qmckl_context context, void * const ptr) {
+  | 
+  |   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+  |       return qmckl_failwith(context,
+  | 			    QMCKL_INVALID_CONTEXT,
+  | 			    "qmckl_free",
+  | 			    NULL);
+  |   }
+  | 
+  |   if (ptr == NULL) {
+  |     return qmckl_failwith(context,
+  | 			  QMCKL_INVALID_ARG_2,
+  | 			  "qmckl_free",
+  | 			  "NULL pointer");
+  |   }
+  | 
+  |   qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  | 
+  |   qmckl_lock(context);
+  |   {
+  |     /* Find pointer in array of saved pointers */
+  |     size_t pos = (size_t) 0;
+  |     while ( pos < ctx->memory.array_size && ctx->memory.element[pos].pointer != ptr) {
+  |       pos += (size_t) 1;
+  |     }
+  | 
+  |     if (pos >= ctx->memory.array_size) {
+  |       /* Not found */
+  |       qmckl_unlock(context);
+  |       return qmckl_failwith(context,
+  | 			    QMCKL_INVALID_ARG_2,
+  | 			    "qmckl_free",
+  | 			    "Pointer not found in context");
+  |     }
+  | 
+  |     free(ptr);
+  | 
+  |     memset( &(ctx->memory.element[pos]), 0, sizeof(qmckl_memory_info_struct) );
+  |     ctx->memory.n_allocated -= (size_t) 1;
+  |   }
+  |   qmckl_unlock(context);
+  | 
+  |   return QMCKL_SUCCESS;
+  | }
+  `----
+
+  ,----
+  | #ifdef HAVE_DEVICE_POINTERS
+  | qmckl_exit_code qmckl_free_device(qmckl_context context, void * const ptr, int device_id) {
+  | 
+  |   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+  |       return qmckl_failwith(context,
+  | 			    QMCKL_INVALID_CONTEXT,
+  | 			    "qmckl_free",
+  | 			    NULL);
+  |   }
+  | 
+  |   if (ptr == NULL) {
+  |     return qmckl_failwith(context,
+  | 			  QMCKL_INVALID_ARG_2,
+  | 			  "qmckl_free",
+  | 			  "NULL pointer");
+  |   }
+  | 
+  |   qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  | 
+  |   qmckl_lock(context);
+  |   {
+  |     /* Find pointer in array of saved pointers */
+  |     size_t pos = (size_t) 0;
+  |     while ( pos < ctx->memory.array_size && ctx->memory.element[pos].pointer != ptr) {
+  |       pos += (size_t) 1;
+  |     }
+  | 
+  |     if (pos >= ctx->memory.array_size) {
+  |       /* Not found */
+  |       qmckl_unlock(context);
+  |       return qmckl_failwith(context,
+  | 			    QMCKL_FAILURE,
+  | 			    "qmckl_free",
+  | 			    "Pointer not found in context");
+  |     }
+  | 
+  |     omp_target_free(ptr, device_id);
+  | 
+  |     memset( &(ctx->memory.element[pos]), 0, sizeof(qmckl_memory_info_struct) );
+  |     ctx->memory.n_allocated -= (size_t) 1;
+  |   }
+  |   qmckl_unlock(context);
+  | 
+  |   return QMCKL_SUCCESS;
+  | }
+  | #endif
+  `----
+
+
+4 Get the size of a memory block
+================================
+
+  All the blocks allocated with `qmckl_malloc' keep track of how many
+  bytes were allocated. Using `qmckl_malloc_size' allows to get this
+  information.
+
+  ,----
+  | qmckl_exit_code
+  | qmckl_get_malloc_info(qmckl_context context,
+  | 		      const void* pointer, 
+  | 		      qmckl_memory_info_struct* info);
+  `----
+
+  ,----
+  | qmckl_exit_code
+  | qmckl_get_malloc_info(qmckl_context context,
+  | 		      const void* ptr, 
+  | 		      qmckl_memory_info_struct* info) 
+  | {
+  | 
+  |   assert (qmckl_context_check(context) != QMCKL_NULL_CONTEXT);
+  | 
+  |   qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  | 
+  |   if (ptr == NULL) {
+  |     return qmckl_failwith(context,
+  | 			  QMCKL_INVALID_ARG_2,
+  | 			  "qmckl_get_malloc_info",
+  | 			  "Null pointer");
+  |   }
+  | 
+  |   if (info == NULL) {
+  |     return qmckl_failwith(context,
+  | 			  QMCKL_INVALID_ARG_3,
+  | 			  "qmckl_get_malloc_info",
+  | 			  "Null pointer");
+  |   }
+  | 
+  |   qmckl_lock(context);
+  |   {
+  |     /* Find the pointer entry */
+  |     size_t pos = (size_t) 0;
+  |     while ( pos < ctx->memory.array_size && ctx->memory.element[pos].pointer != ptr) {
+  |       pos += (size_t) 1;
+  |     }
+  | 
+  |     if (pos >= ctx->memory.array_size) {
+  |       /* Not found */
+  |       qmckl_unlock(context);
+  |       return qmckl_failwith(context,
+  | 			    QMCKL_INVALID_ARG_2,
+  | 			    "qmckl_get_malloc_info",
+  | 			    "Pointer not found in context");
+  |     }
+  | 
+  |     /* Copy info */
+  |     memcpy(info, &(ctx->memory.element[pos]), sizeof(qmckl_memory_info_struct));
+  |   }
+  |   qmckl_unlock(context);
+  | 
+  |   return QMCKL_SUCCESS;
+  | }
+  `----
+
+
+  ,----
+  | /* Create a context */
+  | context = qmckl_context_create();
+  | 
+  | info = qmckl_memory_info_struct_zero;
+  | info.size = (size_t) 3*sizeof(int);
+  | 
+  | /* Allocate an array of ints */
+  | a = (int*) qmckl_malloc(context, info);
+  | 
+  | /* Check that the size of a is 3*sizeof(int) */
+  | info = qmckl_memory_info_struct_zero;
+  | rc = qmckl_get_malloc_info(context, NULL, &info);
+  | assert (rc == QMCKL_INVALID_ARG_2);
+  | rc = qmckl_get_malloc_info(context, &rc, &info);
+  | assert (rc == QMCKL_INVALID_ARG_2);
+  | rc = qmckl_get_malloc_info(context, a, &info);
+  | assert (rc == QMCKL_SUCCESS);
+  | assert (info.size == 3*sizeof(int));
+  | rc = qmckl_context_destroy(context);
+  `----

@@ -105,7 +105,8 @@ typedef int32_t qmckl_exit_code;
    | ~QMCKL_DEALLOCATION_FAILED~ |  105 | 'De-allocation failed' |
    | ~QMCKL_NOT_PROVIDED~        |  106 | 'Not provided'         |
    | ~QMCKL_OUT_OF_BOUNDS~       |  107 | 'Index out of bounds'  |
-   | ~QMCKL_INVALID_EXIT_CODE~   |  108 | 'Invalid exit code'    |
+   | ~QMCKL_ALREADY_SET~         |  108 | 'Already set'          |
+   | ~QMCKL_INVALID_EXIT_CODE~   |  109 | 'Invalid exit code'    |
 
    # We need to force Emacs not to indent the Python code:
    # -*- org-src-preserve-indentation: t
@@ -164,7 +165,8 @@ return '\n'.join(result)
    #define  QMCKL_DEALLOCATION_FAILED      ((qmckl_exit_code) 105)
    #define  QMCKL_NOT_PROVIDED             ((qmckl_exit_code) 106)
    #define  QMCKL_OUT_OF_BOUNDS            ((qmckl_exit_code) 107)
-   #define  QMCKL_INVALID_EXIT_CODE        ((qmckl_exit_code) 108)
+   #define  QMCKL_ALREADY_SET              ((qmckl_exit_code) 108)
+   #define  QMCKL_INVALID_EXIT_CODE        ((qmckl_exit_code) 109)
    #+end_src
 
    #+begin_src f90 :comments org :tangle (eval fh_type) :exports none
@@ -196,7 +198,8 @@ return '\n'.join(result)
       integer(qmckl_exit_code), parameter :: QMCKL_DEALLOCATION_FAILED      = 105
       integer(qmckl_exit_code), parameter :: QMCKL_NOT_PROVIDED             = 106
       integer(qmckl_exit_code), parameter :: QMCKL_OUT_OF_BOUNDS            = 107
-      integer(qmckl_exit_code), parameter :: QMCKL_INVALID_EXIT_CODE        = 108
+      integer(qmckl_exit_code), parameter :: QMCKL_ALREADY_SET              = 108
+      integer(qmckl_exit_code), parameter :: QMCKL_INVALID_EXIT_CODE        = 109
    #+end_src
    :end:
 
@@ -330,6 +333,9 @@ return '\n'.join(result)
    case QMCKL_OUT_OF_BOUNDS:
          return "Index out of bounds";
 
+   case QMCKL_ALREADY_SET:
+         return "Already set";
+
    case QMCKL_INVALID_EXIT_CODE:
          return "Invalid exit code";
    #+end_example
@@ -354,6 +360,7 @@ void qmckl_string_of_error_f(const qmckl_exit_code error, char result[<<MAX_STRI
      subroutine qmckl_string_of_error (error, string) bind(C, name='qmckl_string_of_error_f')
        use, intrinsic :: iso_c_binding
        import
+       implicit none
        integer (qmckl_exit_code), intent(in), value :: error
        character, intent(out) :: string(<<MAX_STRING_LENGTH()>>)
      end subroutine qmckl_string_of_error
@@ -548,6 +555,58 @@ if (x < 0) {
  }
    #+end_src
 
+* Last error
+
+  Returns a string describing the last error, using ~qmckl_get_error~.
+
+  # Header
+   #+begin_src c :comments org :tangle (eval h_func)
+qmckl_exit_code
+qmckl_last_error(qmckl_context context, char* buffer);
+   #+end_src
+
+  # Source
+  #+begin_src c :tangle (eval c) :exports none
+qmckl_exit_code
+qmckl_last_error(qmckl_context context, char* buffer) {
+
+  char function_name[QMCKL_MAX_FUN_LEN];
+  char message[QMCKL_MAX_MSG_LEN];
+
+  qmckl_exit_code rc, last_rc;
+
+  if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+    strncpy(buffer, "Null context", 13);
+    return QMCKL_FAILURE;
+  }
+
+  rc = qmckl_get_error(context, &last_rc, function_name, message);
+  if (rc != QMCKL_SUCCESS) {
+    return rc;
+  }
+
+
+  sprintf(buffer, "Error -- %s -- in %s\n%s",
+          qmckl_string_of_error(last_rc),
+          function_name, message);
+
+  return QMCKL_SUCCESS;
+}
+    #+end_src
+    
+** Fortran inteface
+
+   #+begin_src f90 :tangle (eval fh_func) :exports none :noweb yes
+  interface
+     subroutine qmckl_last_error (context, string) bind(C, name='qmckl_last_error')
+       use, intrinsic :: iso_c_binding
+       import
+       implicit none
+       integer (c_int64_t) , intent(in), value :: context
+       character, intent(out) :: string(*)
+     end subroutine qmckl_last_error
+  end interface
+   #+end_src
 
 * End of files                                                    :noexport:
 
@@ -571,11 +630,14 @@ if (x < 0) {
   assert (strcmp(function_name,"qmckl_transpose") == 0);
   assert (strcmp(message,"Success") == 0);
 
+  exit_code = qmckl_context_destroy(context);
+  assert(exit_code == QMCKL_SUCCESS);
+
   return 0;
 }
    #+end_src
 
-   # -*- mode: org -*-
-   # vim: syntax=c
+# -*- mode: org -*-
+# vim: syntax=c
 
 

@@ -1,0 +1,928 @@
+		      ___________________________
+
+		       SHERMAN-MORRISON-WOODBURY
+
+				TREX CoE
+		      ___________________________
+
+
+Table of Contents
+_________________
+
+1. Headers
+2. Naïve Sherman-Morrison
+.. 1. `qmckl_sherman_morrison'
+..... 1. Requirements
+..... 2. C header
+..... 3. C source
+..... 4. Performance
+3. Woodbury 2x2
+.. 1. `qmckl_woodbury_2'
+..... 1. Requirements
+..... 2. C header
+..... 3. C source
+..... 4. Performance
+4. Woodbury 3x3
+.. 1. `qmckl_woodbury_3'
+..... 1. Requirements
+..... 2. C header
+..... 3. C source
+..... 4. Performance...
+5. Sherman-Morrison with update splitting
+.. 1. `qmckl_sherman_morrison_splitting'
+..... 1. Requirements
+..... 2. C header
+..... 3. C source
+..... 4. Performance...
+6. Woodbury 3x3 and 2x2 with Sherman-Morrison and update splitting
+.. 1. `qmckl_sherman_morrison_smw32s'
+..... 1. Requirements
+..... 2. C header
+..... 3. C source
+..... 4. Performance...
+7. Helper Functions
+.. 1. `qmckl_slagel_splitting'
+..... 1. Requirements
+..... 2. C header
+..... 3. C source
+..... 4. Performance
+8. End of files
+
+
+
+
+
+1 Headers
+=========
+
+  ,----
+  | #include "qmckl.h"
+  | #include "assert.h"
+  | #ifdef HAVE_CONFIG_H
+  | #include "config.h"
+  | #endif
+  | #include <math.h>
+  | 
+  | int main() {
+  |   qmckl_context context;
+  |   context = qmckl_context_create();
+  |   qmckl_exit_code rc;
+  `----
+
+
+2 Naïve Sherman-Morrison
+========================
+
+2.1 `qmckl_sherman_morrison'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  This is the simplest of the available Sherman-Morrison-Woodbury
+  kernels. It applies rank-1 updates one by one in the order that is
+  given. It only checks if the denominator in the Sherman-Morrison
+  formula is not too close to zero when an update is evaluated. It will
+  exit with an error code of the denominator is too close to zero.
+
+  The formula for any update $u_j$ (index $j$ is suppresed for clarity)
+  that is applied is \[ (S + uv^T)^{-1} = S^{-1} - \frac{S^{-1} uv^T
+  S^{-1}}{1 + v^T S^{-1} u} \]
+
+  where $S$ is the Slater-matrix, $u$ and $v^T$ are the column and row
+  vectors containing the updates, $S^{-1}$ is the inverse of the
+  Slater-matrix.
+
+  Even though the Slater-matrix $S$ with all updates applied at once is
+  invertable, during the course of applying updates to the inverse
+  Slater-matrix $S^{-1}$ one-by-one it can happen that one of the
+  intermediate inverse matrices $S^{-1}$ becomes singular. Therefore a
+  global threshold value $\epsilon$ is defined that is used to evaluate
+  each individual update $u_j$ when it is applied.
+
+  This value sets the lower bound for which the denominator
+  $1+v_j^TS^{-1}u_j$ is considered to be too small and will most
+  probably result in a singular matrix $S$, or at least in an inverse of
+  $S$ of very poor numerical quality. Therefore, when $1+v_j^TS^{-1}u_j
+  \geq \epsilon$, the update is applied as usual and the kernel exits
+  with return code \texttt{QMCKL_SUCCESS}.  If $1+v_j^TS^{-1}u_j \leq
+  \epsilon$ the update is rejected and the kernel exits with return code
+  \texttt{QMCKL_FAILURE}.
+
+  If the determinant of the Slater-matrix is passed, it will be updated
+  to the determinant resulting from applying the updates to the original
+  matrix.
+
+   qmckl_context  context                   in     Global state                                         
+   uint64_t       LDS                       in     Leading dimension of Slater_inv                      
+   uint64_t       Dim                       in     Dimension of Slater_inv                              
+   uint64_t       N_updates                 in     Number of rank-1 updates to be applied to Slater_inv 
+   double         Updates[N_updates*Dim]    in     Array containing the updates                         
+   uint64_t       Updates_index[N_updates]  in     Array containing the rank-1 updates                  
+   double         breakdown                 in     Break-down parameter on which to fail or not         
+   double         Slater_inv[LDS*Dim]       inout  Array containing the inverse of a Slater-matrix      
+   double*        determinant               inout  Determinant of the Slater-matrix                     
+
+
+2.1.1 Requirements
+------------------
+
+  * `context' is not `QMCKL_NULL_CONTEXT'
+  * `LDS >= 2'
+  * `Dim >= 2'
+  * `N_updates >= 1'
+  * `Updates' is allocated with $N_updates \times Dim$ elements
+  * `Updates_index' is allocated with $N_updates$ elements
+  * `breakdown' is a small number such that $0 < breakdown << 1$
+  * `Slater_inv' is allocated with $Dim \times Dim$ elements
+
+
+2.1.2 C header
+--------------
+
+  ,----
+
+  `----
+
+
+2.1.3 C source
+--------------
+
+  ,----
+  | #include <stdbool.h>
+  | #include <math.h>
+  | #include "qmckl.h"
+  | 
+  | qmckl_exit_code qmckl_sherman_morrison(const qmckl_context context,
+  | 				const uint64_t LDS,
+  | 				const uint64_t Dim,
+  | 				const uint64_t N_updates,
+  | 				const double* Updates,
+  | 				const uint64_t* Updates_index,
+  | 				const double breakdown,
+  | 				double* Slater_inv,
+  | 				double* determinant) {
+  | 
+  |   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+  |     return QMCKL_NULL_CONTEXT;
+  |   }
+  | 
+  |   double C[Dim];
+  |   double D[Dim];
+  | 
+  |   uint64_t l = 0;
+  |   // For each update
+  |   while (l < N_updates) {
+  |     // C = A^{-1} x U_l
+  |     for (uint64_t i = 0; i < Dim; i++) {
+  |       C[i] = 0;
+  |       for (uint64_t j = 0; j < Dim; j++) {
+  | 	C[i] += Slater_inv[i * LDS + j] * Updates[l * Dim + j];
+  |       }
+  |     }
+  | 
+  |     // Denominator
+  |     double den = 1 + C[Updates_index[l] - 1];
+  | 
+  |     if (fabs(den) < breakdown) {
+  |       return QMCKL_FAILURE;
+  |     }
+  |     double iden = 1 / den;
+  | 
+  |     // Update det(A)
+  |     if (determinant != NULL)
+  |       *determinant *= den;
+  | 
+  |     // D = v^T x A^{-1}
+  |     for (uint64_t j = 0; j < Dim; j++) {
+  |       D[j] = Slater_inv[(Updates_index[l] - 1) * LDS + j];
+  |     }
+  | 
+  |     // A^{-1} = A^{-1} - C x D / den
+  |     for (uint64_t i = 0; i < Dim; i++) {
+  |       for (uint64_t j = 0; j < Dim; j++) {
+  | 	double update = C[i] * D[j] * iden;
+  | 	Slater_inv[i * LDS + j] -= update;
+  |       }
+  |     }
+  | 
+  |     l += 1;
+  |   }
+  | 
+  |   return QMCKL_SUCCESS;
+  | }
+  `----
+
+
+2.1.4 Performance
+-----------------
+
+  This function performs best when there is only 1 rank-1 update in the
+  update cycle. It is not useful to use Sherman-Morrison with update
+  splitting for these cycles since splitting can never resolve a
+  situation where applying the update causes singular behaviour.
+
+
+3 Woodbury 2x2
+==============
+
+3.1 `qmckl_woodbury_2'
+~~~~~~~~~~~~~~~~~~~~~~
+
+  The Woodbury 2x2 kernel. It is used to apply two rank-1 updates at
+  once. The formula used in this algorithm is called the Woodbury Matrix
+  Identity \[ (S + U V)^{-1} = S^{-1} - C B^{-1} D \] where $S$ is the
+  Slater-matrix $U$ and $V$ are the matrices containing the updates and
+  the canonical basis matrix $S^{-1}$ is the inverse of the
+  Slater-matrix $C:= S^{-1}U$, a Dim $\times 2$ matrix $B := 1 + VC$,
+  the $2 \times 2$ matrix that is going to be inverted $D := VS^{-1}$, a
+  $2 \times Dim$ matrix
+
+  If the determinant of the Slater-matrix is passed, it will be updated
+  to the determinant resulting from applying the updates to the original
+  matrix.
+
+
+
+   qmckl_context  context              in     Global state                                    
+   uint64_t       LDS                  in     Leading dimension of Slater_inv                 
+   uint64_t       Dim                  in     Dimension of Slater_inv                         
+   double         Updates[2*Dim]       in     Array containing the updates                    
+   uint64_t       Updates_index[2]     in     Array containing the rank-1 updates             
+   double         breakdown            in     Break-down parameter on which to fail or not    
+   double         Slater_inv[LDS*Dim]  inout  Array containing the inverse of a Slater-matrix 
+   double*        determinant          inout  Determinant of Slater-matrix                    
+
+
+3.1.1 Requirements
+------------------
+
+  - `context' is not `qmckl_null_context'
+  - `LDS >= 2'
+  - `Dim >= 2'
+  - `Updates' is allocated with $2 \times Dim$ elements
+  - `Updates_index' is allocated with $2$ elements
+  - `breakdown' is a small number such that $0 < breakdown << 1$
+  - `Slater_inv' is allocated with $Dim \times Dim$ elements
+
+
+3.1.2 C header
+--------------
+
+  ,----
+
+  `----
+
+
+3.1.3 C source
+--------------
+
+  ,----
+  | #include <stdbool.h>
+  | #include <math.h>
+  | #include "qmckl.h"
+  | 
+  | qmckl_exit_code qmckl_woodbury_2(const qmckl_context context,
+  | 				const uint64_t LDS,
+  | 				const uint64_t Dim,
+  | 				const double* Updates,
+  | 				const uint64_t* Updates_index,
+  | 				const double breakdown,
+  | 				double* Slater_inv,
+  | 				double* determinant) {
+  | /*
+  |     C := S^{-1} * U,    dim x 2
+  |     B := 1 + V * C,     2 x 2
+  |     D := V * S^{-1},    2 x dim
+  | */
+  | 
+  |   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+  |     return QMCKL_NULL_CONTEXT;
+  |   }
+  | 
+  |   const uint64_t row1 = (Updates_index[0] - 1);
+  |   const uint64_t row2 = (Updates_index[1] - 1);
+  | 
+  |   // Compute C = S_inv * U  !! NON-STANDARD MATRIX MULTIPLICATION BECAUSE
+  |   // OF LAYOUT OF 'Updates' !!
+  |   double C[2 * Dim];
+  |   for (uint64_t i = 0; i < Dim; i++) {
+  |     for (uint64_t j = 0; j < 2; j++) {
+  |       C[i * 2 + j] = 0;
+  |       for (uint64_t k = 0; k < Dim; k++) {
+  | 	C[i * 2 + j] += Slater_inv[i * LDS + k] * Updates[Dim * j + k];
+  |       }
+  |     }
+  |   }
+  | 
+  |   // Compute B = 1 + V * C
+  |   const double B0 = C[row1 * 2] + 1;
+  |   const double B1 = C[row1 * 2 + 1];
+  |   const double B2 = C[row2 * 2];
+  |   const double B3 = C[row2 * 2 + 1] + 1;
+  | 
+  |   // Check if determinant of inverted matrix is not zero
+  |   double det = B0 * B3 - B1 * B2;
+  |   if (fabs(det) < breakdown) {
+  |     return QMCKL_FAILURE;
+  |   }
+  | 
+  |   // Update det(S) when passed
+  |   if (determinant != NULL)
+  |     *determinant *= det;
+  | 
+  |   // Compute B^{-1} with explicit formula for 2x2 inversion
+  |   double Binv[4], idet = 1.0 / det;
+  |   Binv[0] = idet * B3;
+  |   Binv[1] = -1.0 * idet * B1;
+  |   Binv[2] = -1.0 * idet * B2;
+  |   Binv[3] = idet * B0;
+  | 
+  |   // Compute tmp = B^{-1} x (V.S^{-1})
+  |   double tmp[2 * Dim];
+  |   for (uint64_t i = 0; i < 2; i++) {
+  |     for (uint64_t j = 0; j < Dim; j++) {
+  |       tmp[i * Dim + j] = Binv[i * 2] * Slater_inv[row1 * LDS + j];
+  |       tmp[i * Dim + j] += Binv[i * 2 + 1] * Slater_inv[row2 * LDS + j];
+  |     }
+  |   }
+  | 
+  |   // Compute (S + U V)^{-1} = S^{-1} - C x tmp
+  |   for (uint64_t i = 0; i < Dim; i++) {
+  |     for (uint64_t j = 0; j < Dim; j++) {
+  |       Slater_inv[i * LDS + j] -= C[i * 2] * tmp[j];
+  |       Slater_inv[i * LDS + j] -= C[i * 2 + 1] * tmp[Dim + j];
+  |     }
+  |   }
+  | 
+  |   return QMCKL_SUCCESS;
+  | }
+  `----
+
+
+3.1.4 Performance
+-----------------
+
+  This function is most efficient when used in cases where there are
+  only 2 rank-1 updates and it is sure they will not result in a
+  singular matrix.
+
+
+4 Woodbury 3x3
+==============
+
+4.1 `qmckl_woodbury_3'
+~~~~~~~~~~~~~~~~~~~~~~
+
+  The 3x3 version of the Woodbury 2x2 kernel. It is used to apply three
+  rank-1 updates at once. The formula used in this kernel is the same as
+  for Woodbury 2x2, except for the sizes of the following matrices:
+
+  $C:= S^{-1}U$, a Dim $\times 3$ matrix $B := 1 + VC$, the $3 \times 3$
+  matrix that is going to be inverted $D := VS^{-1}$, a $3 \times Dim$
+  matrix
+
+  If the determinant of the Slater-matrix is passed, it will be updated
+  to the determinant resulting from applying the updates to the original
+  matrix.
+
+
+
+   qmckl_context  context              in     Global state                                    
+   uint64_t       LDS                  in     Leading dimension of Slater_inv                 
+   uint64_t       Dim                  in     Dimension of Slater_inv                         
+   double         Updates[3*Dim]       in     Array containing the updates                    
+   uint64_t       Updates_index[3]     in     Array containing the rank-1 updates             
+   double         breakdown            in     Break-down parameter on which to fail or not    
+   double         Slater_inv[LDS*Dim]  inout  Array containing the inverse of a Slater-matrix 
+   double*        determinant          inout  Determinant of Slater-matrix                    
+
+
+4.1.1 Requirements
+------------------
+
+  - `context' is not `qmckl_null_context'
+  - `LDS >= 2'
+  - `Dim >= 2'
+  - `Updates' is allocated with $3 \times Dim$ elements
+  - `Updates_index' is allocated with $3$ elements
+  - `breakdown' is a small number such that $0 < breakdown << 1$
+  - `Slater_inv' is allocated with $Dim \times Dim$ elements
+
+
+4.1.2 C header
+--------------
+
+  ,----
+
+  `----
+
+
+4.1.3 C source
+--------------
+
+  ,----
+  | #include <stdbool.h>
+  | #include <math.h>
+  | #include "qmckl.h"
+  | 
+  | qmckl_exit_code qmckl_woodbury_3(const qmckl_context context,
+  | 				const uint64_t LDS,
+  | 				const uint64_t Dim,
+  | 				const double* Updates,
+  | 				const uint64_t* Updates_index,
+  | 				const double breakdown,
+  | 				double* Slater_inv,
+  | 				double* determinant) {
+  | /*
+  |     C := S^{-1} * U,    dim x 3
+  |     B := 1 + V * C,     3 x 3
+  |     D := V * S^{-1},    3 x dim
+  | */
+  | 
+  |   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+  |     return QMCKL_NULL_CONTEXT;
+  |   }
+  | 
+  |   const uint64_t row1 = (Updates_index[0] - 1);
+  |   const uint64_t row2 = (Updates_index[1] - 1);
+  |   const uint64_t row3 = (Updates_index[2] - 1);
+  | 
+  |   // Compute C = S_inv * U  !! NON-STANDARD MATRIX MULTIPLICATION BECAUSE
+  |   // OF LAYOUT OF 'Updates' !!
+  |   double C[3 * Dim];
+  |   for (uint64_t i = 0; i < Dim; i++) {
+  |     for (uint64_t j = 0; j < 3; j++) {
+  |       C[i * 3 + j] = 0;
+  |       for (uint64_t k = 0; k < Dim; k++) {
+  | 	C[i * 3 + j] += Slater_inv[i * LDS + k] * Updates[Dim * j + k];
+  |       }
+  |     }
+  |   }
+  | 
+  |   // Compute B = 1 + V.C
+  |   const double B0 = C[row1 * 3] + 1;
+  |   const double B1 = C[row1 * 3 + 1];
+  |   const double B2 = C[row1 * 3 + 2];
+  |   const double B3 = C[row2 * 3];
+  |   const double B4 = C[row2 * 3 + 1] + 1;
+  |   const double B5 = C[row2 * 3 + 2];
+  |   const double B6 = C[row3 * 3];
+  |   const double B7 = C[row3 * 3 + 1];
+  |   const double B8 = C[row3 * 3 + 2] + 1;
+  | 
+  |   // Check if determinant of B is not too close to zero
+  |   double det;
+  |   det = B0 * (B4 * B8 - B5 * B7) - B1 * (B3 * B8 - B5 * B6) +
+  | 	B2 * (B3 * B7 - B4 * B6);
+  |   if (fabs(det) < breakdown) {
+  |     return QMCKL_FAILURE;
+  |   }
+  | 
+  |   // Update det(Slater) if passed
+  |   if (determinant != NULL)
+  |     *determinant *= det;
+  | 
+  |   // Compute B^{-1} with explicit formula for 3x3 inversion
+  |   double Binv[9], idet = 1.0 / det;
+  |   Binv[0] = (B4 * B8 - B7 * B5) * idet;
+  |   Binv[1] = -(B1 * B8 - B7 * B2) * idet;
+  |   Binv[2] = (B1 * B5 - B4 * B2) * idet;
+  |   Binv[3] = -(B3 * B8 - B6 * B5) * idet;
+  |   Binv[4] = (B0 * B8 - B6 * B2) * idet;
+  |   Binv[5] = -(B0 * B5 - B3 * B2) * idet;
+  |   Binv[6] = (B3 * B7 - B6 * B4) * idet;
+  |   Binv[7] = -(B0 * B7 - B6 * B1) * idet;
+  |   Binv[8] = (B0 * B4 - B3 * B1) * idet;
+  | 
+  |   // Compute tmp = B^{-1} x (V.S^{-1})
+  |   double tmp[3 * Dim];
+  |   for (uint64_t i = 0; i < 3; i++) {
+  |     for (uint64_t j = 0; j < Dim; j++) {
+  |       tmp[i * Dim + j] = Binv[i * 3] * Slater_inv[row1 * LDS + j];
+  |       tmp[i * Dim + j] += Binv[i * 3 + 1] * Slater_inv[row2 * LDS + j];
+  |       tmp[i * Dim + j] += Binv[i * 3 + 2] * Slater_inv[row3 * LDS + j];
+  |     }
+  |   }
+  | 
+  |   // Compute (S + U V)^{-1} = S^{-1} - C x tmp
+  |   for (uint64_t i = 0; i < Dim; i++) {
+  |     for (uint64_t j = 0; j < Dim; j++) {
+  |       Slater_inv[i * LDS + j] -= C[i * 3] * tmp[j];
+  |       Slater_inv[i * LDS + j] -= C[i * 3 + 1] * tmp[Dim + j];
+  |       Slater_inv[i * LDS + j] -= C[i * 3 + 2] * tmp[2 * Dim + j];
+  |     }
+  |   }
+  | 
+  |   return QMCKL_SUCCESS;
+  | }
+  `----
+
+
+4.1.4 Performance...
+--------------------
+
+  This function is most efficient when used in cases where there are
+  only 3 rank-1 updates and it is sure they will not result in a
+  singular matrix.
+
+
+5 Sherman-Morrison with update splitting
+========================================
+
+5.1 `qmckl_sherman_morrison_splitting'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  This is a variation on the 'Naive' Sherman-Morrison kernel. Whenever
+  the denominator $1+v_j^T S^{-1} u_j$ in the Sherman-Morrison formula
+  is deemed to be too close to zero, the update $u_j$ is split in half:
+  $u_j \rightarrow \frac{1}{2} u_j$. One half is applied immediately
+  --necessarily increasing the value of the denominator because of the
+  split-- while the other halve is put in a queue that will be applied
+  when all the remaining updates have been treated.
+
+  The kernel is executed recursively until the queue is eiter empty and
+  all updates are applied successfully, or the size of the queue equals
+  the number of initial updates. In the last case the Slater-matrix that
+  would have resulted from applying the updates is singular and
+  therefore the kernel exits with an exit code.
+
+  If the determinant of the Slater-matrix is passed, it will be updated
+  to the determinant resulting from applying the updates to the original
+  matrix.
+
+   qmckl_context  context                   in     Global state                                         
+   uint64_t       LDS                       in     Leading dimension of Slater_inv                      
+   uint64_t       Dim                       in     Dimension of Slater_inv                              
+   uint64_t       N_updates                 in     Number of rank-1 updates to be applied to Slater_inv 
+   double         Updates[N_updates*Dim]    in     Array containing the updates                         
+   uint64_t       Updates_index[N_updates]  in     Array containing the rank-1 updates                  
+   double         breakdown                 in     Break-down parameter on which to fail or not         
+   double         Slater_inv[LDS*Dim]       inout  Array containing the inverse of a Slater-matrix      
+   double*        determinant               inout  Determinant of the Slater-matrix                     
+  If the determinant of the Slater-matrix is passed, it will be updated
+  to the determinant resulting from applying the updates to the original
+  matrix.
+
+
+5.1.1 Requirements
+------------------
+
+  * `context' is not `QMCKL_NULL_CONTEXT'
+  * `LDS >= 2'
+  * `Dim >= 2'
+  * `N_updates >= 1'
+  * `Updates' is allocated with $N_updates \times Dim$ elements
+  * `Updates_index' is allocated with $N_updates$ elements
+  * `breakdown' is a small number such that $0 < breakdown << 1$
+  * `Slater_inv' is allocated with $Dim \times Dim$ elements
+
+
+5.1.2 C header
+--------------
+
+  ,----
+
+  `----
+
+
+5.1.3 C source
+--------------
+
+  ,----
+  | #include <stdbool.h>
+  | #include "qmckl.h"
+  | 
+  | qmckl_exit_code qmckl_sherman_morrison_splitting(const qmckl_context context,
+  | 				const uint64_t LDS,
+  | 				const uint64_t Dim,
+  | 				const uint64_t N_updates,
+  | 				const double* Updates,
+  | 				const uint64_t* Updates_index,
+  | 				const double breakdown,
+  | 				double* Slater_inv,
+  | 				double* determinant) {
+  | 
+  |   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+  |     return QMCKL_NULL_CONTEXT;
+  |   }
+  | 
+  |   double later_updates[Dim * N_updates];
+  |   uint64_t later_index[N_updates];
+  |   uint64_t later = 0;
+  | 
+  |   (void) qmckl_slagel_splitting(LDS, Dim, N_updates, Updates, Updates_index,
+  | 			    breakdown, Slater_inv, later_updates, later_index, &later, determinant);
+  | 
+  |   if (later > 0) {
+  |     (void) qmckl_sherman_morrison_splitting(context, LDS, Dim, later,
+  | 			    later_updates, later_index, breakdown, Slater_inv, determinant);
+  |   }
+  | 
+  |   return QMCKL_SUCCESS;
+  | }
+  | 
+  `----
+
+
+5.1.4 Performance...
+--------------------
+
+  This kernel performs best when there are 2 or more rank-1 update
+  cycles and fail-rate is high.
+
+
+6 Woodbury 3x3 and 2x2 with Sherman-Morrison and update splitting
+=================================================================
+
+6.1 `qmckl_sherman_morrison_smw32s'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  The Woodbury 3x3 and 2x2 kernel with Sherman-Morrison and update
+  splitting combines the low-level Woodbury 3x3 kernel, the Woobury 2x2
+  kernel and Sherman-Morrison with update splitting. It works the almost
+  the same as Woodbury 3x3 with Sherman-Morrison and update splitting,
+  except that when there is a remainder of two rank-1 updates, it is
+  first tried with Woodbury 2x2 instead of sending them all to
+  Sherman-Morrison with update splitting. For example, in the case of 5
+  updates the updates are applied in 1 block of 3 updates end 1 block of
+  2 updates.
+
+  If the determinant of the Slater-matrix is passed, it will be updated
+  to the determinant resulting from applying the updates to the original
+  matrix.
+
+   qmckl_context  context                   in     Global state                                         
+   uint64_t       LDS                       in     Leading dimension of Slater_inv                      
+   uint64_t       Dim                       in     Dimension of Slater_inv                              
+   uint64_t       N_updates                 in     Number of rank-1 updates to be applied to Slater_inv 
+   double         Updates[N_updates*Dim]    in     Array containing the updates                         
+   uint64_t       Updates_index[N_updates]  in     Array containing the rank-1 updates                  
+   double         breakdown                 in     Break-down parameter on which to fail or not         
+   double         Slater_inv[LDS*Dim]       inout  Array containing the inverse of a Slater-matrix      
+   double*        determinant               inout  Determinant of the Slater-matrix                     
+
+
+6.1.1 Requirements
+------------------
+
+  * `context' is not `QMCKL_NULL_CONTEXT'
+  * `LDS >= 2'
+  * `Dim >= 2'
+  * `N_updates >= 1'
+  * `Updates' is allocated with $N_updates \times Dim$ elements
+  * `Updates_index' is allocated with $N_updates$ elements
+  * `breakdown' is a small number such that $0 < breakdown << 1$
+  * `Slater_inv' is allocated with $Dim \times Dim$ elements
+
+
+6.1.2 C header
+--------------
+
+  ,----
+
+  `----
+
+
+6.1.3 C source
+--------------
+
+  ,----
+  | #include <stdbool.h>
+  | #include "qmckl.h"
+  | 
+  | qmckl_exit_code qmckl_sherman_morrison_smw32s(const qmckl_context context,
+  | 				const uint64_t LDS,
+  | 				const uint64_t Dim,
+  | 				const uint64_t N_updates,
+  | 				const double* Updates,
+  | 				const uint64_t* Updates_index,
+  | 				const double breakdown,
+  | 				double* Slater_inv,
+  | 				double* determinant) {
+  | 
+  |   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+  |     return QMCKL_NULL_CONTEXT;
+  |   }
+  | 
+  |   qmckl_exit_code rc;
+  | 
+  |   uint64_t n_of_3blocks = N_updates / 3;
+  |   uint64_t remainder = N_updates % 3;
+  |   uint64_t length_3block = 3 * Dim;
+  | 
+  |   // Apply first 3*n_of_3blocks updates in n_of_3blocks blocks of 3 updates with
+  |   // Woodbury 3x3 kernel
+  |   double later_updates[Dim * N_updates];
+  |   uint64_t later_index[N_updates];
+  |   uint64_t later = 0;
+  |   if (n_of_3blocks > 0) {
+  |     for (uint64_t i = 0; i < n_of_3blocks; i++) {
+  |       const double *Updates_3block = &Updates[i * length_3block];
+  |       const uint64_t *Updates_index_3block = &Updates_index[i * 3];
+  |       rc = qmckl_woodbury_3(context, LDS, Dim, Updates_3block, Updates_index_3block, breakdown, Slater_inv, determinant);
+  |       if (rc != 0) { // Send the entire block to slagel_splitting
+  | 	uint64_t l = 0;
+  | 	(void) qmckl_slagel_splitting(LDS, Dim, 3, Updates_3block, Updates_index_3block,
+  | 		breakdown, Slater_inv, later_updates + (Dim * later), later_index + later, &l, determinant);
+  | 	later = later + l;
+  |       }
+  |     }
+  |   }
+  | 
+  |   // Apply last remaining block of 2 updates with Woodbury 2x2 kernel
+  |   if (remainder == 2) {
+  |     const double *Updates_2block = &Updates[n_of_3blocks * length_3block];
+  |     const uint64_t *Updates_index_2block = &Updates_index[3 * n_of_3blocks];
+  |     rc = qmckl_woodbury_2(context, LDS, Dim, Updates_2block, Updates_index_2block, breakdown, Slater_inv, determinant);
+  |     if (rc != 0) { // Send the entire block to slagel_splitting
+  |       uint64_t l = 0;
+  |       (void) qmckl_slagel_splitting(LDS, Dim, 2, Updates_2block, Updates_index_2block,
+  | 	      breakdown, Slater_inv, later_updates + (Dim * later), later_index + later, &l, determinant);
+  |       later = later + l;
+  |     }
+  |   }
+  |   // Apply last remaining update with slagel_splitting
+  |   else if (remainder == 1) {
+  |     const double *Updates_1block = &Updates[n_of_3blocks * length_3block];
+  |     const uint64_t *Updates_index_1block = &Updates_index[3 * n_of_3blocks];
+  |     uint64_t l = 0;
+  |     (void) qmckl_slagel_splitting(LDS, Dim, 1, Updates_1block, Updates_index_1block,
+  | 	    breakdown, Slater_inv, later_updates + (Dim * later), later_index + later, &l, determinant);
+  |     later = later + l;
+  |   }
+  | 
+  |   if (later > 0) {
+  |     (void) qmckl_sherman_morrison_splitting(context, LDS, Dim, later, later_updates, later_index, breakdown, Slater_inv, determinant);
+  |   }
+  |   return QMCKL_SUCCESS;
+  | }
+  | 
+  `----
+
+
+6.1.4 Performance...
+--------------------
+
+  This kernel performs best for update cycles with 2 or more rank-1
+  updates and the fail-rate is low.
+
+
+7 Helper Functions
+==================
+
+  Private helper-functions that are used by the
+  Sherman-Morrison-Woodbury kernels.  These functions can only be used
+  internally by the kernels in this module.
+
+
+7.1 `qmckl_slagel_splitting'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  `qmckl_slagel_splitting' is the non-recursive, inner part of the
+  'Sherman-Morrison with update splitting'-kernel.  It is used
+  internally to apply a collection of $N$ rank-1 updates to the inverse
+  Slater-matrix $S^{-1}$ and splitting an update in two equal pieces if
+  necessary. In case of a split, it applies the first half of the
+  update, while putting the second half in a waiting queue to be applied
+  at the end.
+
+  Therefore, when $1+v_j^TS^{-1}u_j \geq \epsilon$, the update is
+  applied as usual. Otherwise, $u_j$ will be redefined as
+  $\frac{1}{2}u_j$. One half is applied immediately, the other half will
+  be applied at the end of the algorithm, using vectors
+  $u_{j'}=\frac{1}{2}u_j$ and $v_{j'}^T=v_{j}^T$, which are stored in
+  the array \texttt{later_updates}.
+
+  If the determinant of the Slater-matrix is passed, it will be updated
+  to the determinant resulting from applying the updates to the original
+  matrix.
+
+   uint64_t  LDS                             in     Leading dimension of Slater_inv                               
+   uint64_t  Dim                             in     Dimension of Slater_inv                                       
+   uint64_t  N_updates                       in     Number of rank-1 updates to be applied to Slater_inv          
+   double    Updates[N_updates*Dim]          in     Array containing the rank-1 updates                           
+   uint64_t  Updates_index[N_updates]        in     Array containing positions of the rank-1 updates              
+   double    breakdown                       in     Break-down parameter on which to fail or not                  
+   double    Slater_inv[LDS*Dim]             inout  Array containing the inverse Slater-matrix                    
+   double    later_updates[Dim * N_updates]  inout  Array containing the split updates for later                  
+   uint64_t  later_index[N_updates]          inout  Array containing the positions of the split updates for later 
+   uint64_t  later                           inout  Number of split updates for later                             
+   double*   determinant                     inout  Determinant of the Slater-matrix                              
+
+
+7.1.1 Requirements
+------------------
+
+  - `LDS >= 2'
+  - `Dim >= 2'
+  - `N_updates >= 1'
+  - `Updates' is allocated with $N_updates \times Dim$ elements
+  - `Updates_index' is allocated with $N_updates$ elements
+  - `breakdown' is a small number such that $0 < breakdown << 1$
+  - `Slater_inv' is allocated with $Dim \times Dim$ elements
+  - `later_updates' is allocated with $later \times Dim$ elements
+  - `later_index' is allocated with $N_updates$ elements
+  - `later >= 0'
+
+
+7.1.2 C header
+--------------
+
+  ,----
+
+  `----
+
+
+7.1.3 C source
+--------------
+
+  ,----
+  | #include <stdbool.h>
+  | #include <math.h>
+  | #include "qmckl.h"
+  | 
+  | qmckl_exit_code qmckl_slagel_splitting(uint64_t LDS,
+  | 					      uint64_t Dim,
+  | 					      uint64_t N_updates,
+  | 					      const double *Updates,
+  | 					      const uint64_t *Updates_index,
+  | 					      const double breakdown,
+  | 					      double *Slater_inv,
+  | 					      double *later_updates,
+  | 					      uint64_t *later_index,
+  | 					      uint64_t *later,
+  | 					      double *determinant) {
+  | // #ifdef DEBUG //  Leave commented out since debugging information is not yet implemented in QMCkl.
+  | //   std::cerr << "Called slagel_splitting with " << N_updates << " updates" << std::endl;
+  | // #endif
+  | 
+  |   double C[Dim];
+  |   double D[Dim];
+  | 
+  |   uint64_t l = 0;
+  |   // For each update
+  |   while (l < N_updates) {
+  |     // C = S^{-1} x U_l
+  |     for (uint64_t i = 0; i < Dim; i++) {
+  |       C[i] = 0;
+  |       for (uint64_t j = 0; j < Dim; j++) {
+  | 	C[i] += Slater_inv[i * LDS + j] * Updates[l * Dim + j];
+  |       }
+  |     }
+  | 
+  |     // Denominator
+  |     double den = 1 + C[Updates_index[l] - 1];
+  |     if (fabs(den) < breakdown) { // Here is decided to split the update, or not.
+  | 
+  |       // U_l = U_l / 2: split the update in 2 equal halves and save the second halve in later_updates
+  |       for (uint64_t i = 0; i < Dim; i++) {
+  | 	later_updates[*later * Dim + i] = Updates[l * Dim + i] / 2.0;
+  | 	C[i] /= 2.0;
+  |       }
+  |       later_index[*later] = Updates_index[l];
+  |       (*later)++;
+  | 
+  |       den = 1 + C[Updates_index[l] - 1];
+  |     } // From here onwards we continue with applying the first havel of the update to Slater_inv
+  |     double iden = 1 / den;
+  | 
+  |     if (determinant != NULL)
+  |       *determinant *= den;
+  | 
+  |     // D = v^T x S^{-1}
+  |     for (uint64_t j = 0; j < Dim; j++) {
+  |       D[j] = Slater_inv[(Updates_index[l] - 1) * LDS + j];
+  |     }
+  | 
+  |     // S^{-1} = S^{-1} - C x D / den
+  |     for (uint64_t i = 0; i < Dim; i++) {
+  |       for (uint64_t j = 0; j < Dim; j++) {
+  | 	double update = C[i] * D[j] * iden;
+  | 	Slater_inv[i * LDS + j] -= update;
+  |       }
+  |     }
+  |     l += 1;
+  |   }
+  | 
+  |   return QMCKL_SUCCESS;
+  | }
+  | 
+  `----
+
+
+7.1.4 Performance
+-----------------
+
+  This function cannot be used by itself and is used in Sherman-Morrison
+  with update splitting and Woodbury 3x3 and 2x2 with Sherman-Morrison
+  and update splitting. Please look at the performance reccomendations
+  for those two kernels.
+
+
+8 End of files
+==============
+
+  ,----
+  |   assert (qmckl_context_destroy(context) == QMCKL_SUCCESS);
+  |   return 0;
+  | 
+  | }
+  `----

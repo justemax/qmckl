@@ -1,0 +1,310 @@
+Loading /etc/emacs/site-start.d/00debian.el (source)...
+Loading /etc/emacs/site-start.d/50autoconf.el (source)...
+Loading /etc/emacs/site-start.d/50cmake-data.el (source)...
+Loading /etc/emacs/site-start.d/50dictionaries-common.el (source)...
+Loading debian-ispell...
+Loading /var/cache/dictionaries-common/emacsen-ispell-default.el (source)...
+Loading /var/cache/dictionaries-common/emacsen-ispell-dicts.el (source)...
+11 source blocks added to Library of Babel
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_sq"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_sq"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_sq"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_rescaled"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_rescaled_deriv_e"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_distance_rescaled_deriv_e"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_rescaled_deriv_e"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_sq"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_sq"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_sq"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_rescaled"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_rescaled_deriv_e"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_distance_rescaled_deriv_e"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_distance_rescaled_deriv_e"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")

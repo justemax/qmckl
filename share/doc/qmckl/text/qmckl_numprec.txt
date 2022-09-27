@@ -1,0 +1,211 @@
+			 _____________________
+
+			  NUMERICAL PRECISION
+
+				TREX CoE
+			 _____________________
+
+
+Table of Contents
+_________________
+
+1. Control of the numerical precision
+2. Precision
+3. Range
+4. Helper functions
+
+
+
+
+
+1 Control of the numerical precision
+====================================
+
+  Controlling numerical precision enables optimizations. Here, the
+  default parameters determining the target numerical precision and
+  range are defined. Following the IEEE Standard for Floating-Point
+  Arithmetic (IEEE 754), /precision/ refers to the number of significand
+  bits and /range/ refers to the number of exponent bits.
+
+   `QMCKL_DEFAULT_PRECISION'  53 
+   `QMCKL_DEFAULT_RANGE'      11 
+
+  ,----
+  | typedef struct qmckl_numprec_struct {
+  |   uint32_t  precision;
+  |   uint32_t  range;
+  | } qmckl_numprec_struct;
+  `----
+
+  The following functions set and get the required precision and
+  range. `precision' is an integer between 2 and 53, and `range' is an
+  integer between 2 and 11.
+
+  The setter functions functions return a new context as a 64-bit
+  integer. The getter functions return the value, as a 32-bit
+  integer. The update functions return `QMCKL_SUCCESS' or
+  `QMCKL_FAILURE'.
+
+
+2 Precision
+===========
+
+  `qmckl_context_set_numprec_precision' modifies the parameter for the
+  numerical precision in the context.
+
+  ,----
+  | qmckl_exit_code qmckl_set_numprec_precision(const qmckl_context context, const int precision) {
+  | 
+  |   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT)
+  |     return QMCKL_INVALID_CONTEXT;
+  | 
+  |   if (precision <  2) {
+  |     return qmckl_failwith(context,
+  | 			  QMCKL_INVALID_ARG_2,
+  | 			  "qmckl_update_numprec_precision",
+  | 			  "precision < 2");
+  |   }
+  | 
+  |   if (precision > 53) {
+  |     return qmckl_failwith(context,
+  | 			  QMCKL_INVALID_ARG_2,
+  | 			  "qmckl_update_numprec_precision",
+  | 			  "precision > 53");
+  |   }
+  | 
+  |   qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  | 
+  |   /* This should be always true because the context is valid */
+  |   assert (ctx != NULL);
+  | 
+  |   qmckl_lock(context);
+  |   {
+  |     ctx->numprec.precision = (uint32_t) precision;
+  |   }
+  |   qmckl_unlock(context);
+  | 
+  |   return QMCKL_SUCCESS;
+  | }
+  `----
+
+  ,----
+  | interface
+  |    integer (qmckl_exit_code) function qmckl_set_numprec_precision(context, precision) bind(C)
+  |      use, intrinsic :: iso_c_binding
+  |      import
+  |      integer (qmckl_context), intent(in), value :: context
+  |      integer (c_int32_t), intent(in), value :: precision
+  |    end function qmckl_set_numprec_precision
+  | end interface
+  `----
+
+  `qmckl_get_numprec_precision' returns the value of the numerical
+  precision in the context.
+
+  ,----
+  | int qmckl_get_numprec_precision(const qmckl_context context) {
+  |   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+  |       return qmckl_failwith(context,
+  | 		      QMCKL_INVALID_CONTEXT,
+  | 		      "qmckl_get_numprec_precision",
+  | 		      "");
+  |   }
+  | 
+  |   const qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  |   return ctx->numprec.precision;
+  | }
+  `----
+
+  ,----
+  | interface
+  |    integer (qmckl_exit_code) function qmckl_get_numprec_precision(context) bind(C)
+  |      use, intrinsic :: iso_c_binding
+  |      import
+  |      integer (qmckl_context), intent(in), value :: context
+  |    end function qmckl_get_numprec_precision
+  | end interface
+  `----
+
+
+3 Range
+=======
+
+  `qmckl_set_numprec_range' modifies the parameter for the numerical
+  range in a given context.
+
+  ,----
+  | qmckl_exit_code qmckl_set_numprec_range(const qmckl_context context, const int range) {
+  | 
+  |   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT)
+  |     return QMCKL_INVALID_CONTEXT;
+  | 
+  |   if (range <  2) {
+  |     return qmckl_failwith(context,
+  | 		    QMCKL_INVALID_ARG_2,
+  | 		    "qmckl_set_numprec_range",
+  | 		    "range < 2");
+  |   }
+  | 
+  |   if (range > 11) {
+  |     return qmckl_failwith(context,
+  | 		    QMCKL_INVALID_ARG_2,
+  | 		    "qmckl_set_numprec_range",
+  | 		    "range > 11");
+  |   }
+  | 
+  |   qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  | 
+  |   /* This should be always true because the context is valid */
+  |   assert (ctx != NULL);
+  | 
+  |   qmckl_lock(context);
+  |   {
+  |     ctx->numprec.range = (uint32_t) range;
+  |   }
+  |   qmckl_unlock(context);
+  | 
+  |   return QMCKL_SUCCESS;
+  | }
+  `----
+
+  ,----
+  | interface
+  |    integer (qmckl_exit_code) function qmckl_set_numprec_range(context, range) bind(C)
+  |      use, intrinsic :: iso_c_binding
+  |      import
+  |      integer (qmckl_context), intent(in), value :: context
+  |      integer (c_int32_t), intent(in), value :: range
+  |    end function qmckl_set_numprec_range
+  | end interface
+  `----
+
+  `qmckl_get_numprec_range' returns the value of the numerical range in
+  the context.
+
+  ,----
+  | int qmckl_get_numprec_range(const qmckl_context context) {
+  |   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+  |       return qmckl_failwith(context,
+  | 		      QMCKL_INVALID_CONTEXT,
+  | 		      "qmckl_get_numprec_range",
+  | 		      "");
+  |   }
+  | 
+  |   const qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  |   return ctx->numprec.range;
+  | }
+  `----
+
+
+4 Helper functions
+==================
+
+  `qmckl_get_numprec_epsilon' returns $\epsilon = 2^{1-n}$ where `n' is
+  the precision.  We need to remove the sign bit from the precision.
+
+  ,----
+  | double qmckl_get_numprec_epsilon(const qmckl_context context) {
+  |   const int precision = qmckl_get_numprec_precision(context);
+  |   return 1. /  (double) (1L << (precision-2));
+  | }
+  `----

@@ -35,7 +35,7 @@
 
 AC_PREREQ([2.69])
 
-AC_INIT([qmckl],[0.1.1],[https://github.com/TREX-CoE/qmckl/issues],[],[https://trex-coe.github.io/qmckl/index.html])
+AC_INIT([qmckl],[0.3.1],[https://github.com/TREX-CoE/qmckl/issues],[],[https://trex-coe.github.io/qmckl/index.html])
 AC_CONFIG_AUX_DIR([tools])
 AM_INIT_AUTOMAKE([subdir-objects color-tests parallel-tests silent-rules 1.11])
 
@@ -276,7 +276,8 @@ AS_IF([test "$enable_gpu" = "openmp"], [
   esac]
 )
 
-# OpenMP offloading
+
+# OpenACC offloading
 HAVE_OPENACC_OFFLOAD="no"
 AS_IF([test "$enable_gpu" = "openacc"], [
   AC_DEFINE([HAVE_OPENACC_OFFLOAD], [1], [If defined, activate OpenACC-offloaded routines])
@@ -330,30 +331,11 @@ AS_IF([test "$HAVE_CUBLAS_OFFLOAD" = "yes"], [
 ])
 
 
-##
-
-AC_ARG_ENABLE(debug, [AS_HELP_STRING([--enable-debug],[compile for debugging])], ok=$enableval, ok=no)
-if test "$ok" = "yes"; then
-        if test "$GCC" = "yes"; then
-	        CFLAGS="$CFLAGS \
--g -Wall -W -Wbad-function-cast -Wcast-qual -Warray-bounds -Wdisabled-optimization \
--Wpointer-arith -Wcast-align -Wpedantic -Wextra -Walloc-zero -Werror \
-"
-        fi
-        if test "$GFC" = "yes"; then
-	        FCFLAGS="$FCFLAGS \
--g -fcheck=all -Waliasing -Wampersand -Wconversion \
--Wsurprising -ffpe-trap=zero,overflow,underflow \
--Wintrinsics-std -Wno-tabs -Wintrinsic-shadow -Wline-truncation \
--Wreal-q-constant -Wuninitialized  -fbacktrace -finit-real=nan"
-        fi
-        if test "$FC" = "ifort"; then
-	        FCFLAGS="$FCFLAGS \
--traceback -check all -debug all -fpe-all=0  -implicitnone"
-        fi
-	AC_DEFINE(DEBUG,1,[Define to turn on debugging checks])
-        ARGS="${ARGS} debug"
-fi
+# Device pointers
+AC_ARG_WITH(device-pointers, [AS_HELP_STRING([--with-device-pointers],[Use device pointers on offloaded functions to optimize memory transfers])], HAVE_DEVICE_POINTERS=$withval, HAVE_DEVICE_POINTERS=no)
+AS_IF([test "$HAVE_DEVICE_POINTERS" = "yes" && test "$enable_gpu" = "openmp"], [
+  AC_DEFINE([HAVE_DEVICE_POINTERS], [1], [If defined, use device pointers with offloaded routines])
+])
 
 AC_ARG_ENABLE(malloc-trace, [AS_HELP_STRING([--enable-malloc-trace],[use debug malloc/free])], ok=$enableval, ok=no)
 if test "$ok" = "yes"; then
@@ -370,10 +352,36 @@ fi
 
 AC_ARG_WITH(efence, [AS_HELP_STRING([--with-efence],[use ElectricFence library])], ok=$withval, ok=no)
 if test "$ok" = "yes"; then
-	AC_CHECK_LIB(efence, malloc)
+	AC_CHECK_LIB([efence], [malloc])
         ARGS="${ARGS} efence"
 fi
 
+##
+
+AC_ARG_ENABLE(debug, [AS_HELP_STRING([--enable-debug],[compile for debugging])], ok=$enableval, ok=no)
+if test "$ok" = "yes"; then
+        if test "$GCC" = "yes"; then
+	        CFLAGS="$CFLAGS \
+-g -Wall -W -Wbad-function-cast -Wcast-qual -Warray-bounds -Wdisabled-optimization \
+-fsanitize=address -fno-omit-frame-pointer \
+-Wpointer-arith -Wcast-align -Wpedantic -Wextra -Walloc-zero -Werror \
+"
+		LDFLAGS="$LDFLAGS -fsanitize=address"
+        fi
+        if test "$GFC" = "yes"; then
+	        FCFLAGS="$FCFLAGS \
+-g -fcheck=all -Waliasing -Wampersand -Wconversion \
+-Wsurprising -ffpe-trap=zero,overflow,underflow \
+-Wintrinsics-std -Wno-tabs -Wintrinsic-shadow -Wline-truncation \
+-Wreal-q-constant -Wuninitialized  -fbacktrace -finit-real=nan"
+        fi
+        if test "$FC" = "ifort"; then
+	        FCFLAGS="$FCFLAGS \
+-traceback -check all -debug all -fpe-all=0  -implicitnone"
+        fi
+	AC_DEFINE(DEBUG,1,[Define to turn on debugging checks])
+        ARGS="${ARGS} debug"
+fi
 
 # Checks for header files.
 
@@ -425,6 +433,8 @@ if test "x${QMCKL_DEVEL}" != "x"; then
         HAS_CPPCHECK=1
   fi
 
+  AX_PKG_SWIG(4.0.0, [], AC_MSG_WARN([SWIG is required to build Python API.]) )
+
 fi
 
 
@@ -462,9 +472,11 @@ LDFLAGS:........: ${LDFLAGS}
 LIBS............: ${LIBS}
 USE CHAMELEON...: ${with_chameleon}
 HPC version.....: ${HAVE_HPC}
-OpenMP offload..: ${HAVE_OPENMP_OFFLOAD}
-OpenACC offload.: ${HAVE_OPENACC_OFFLOAD}
-cuBLAS offload..: ${HAVE_CUBLAS_OFFLOAD}
+
+OpenMP offload...: ${HAVE_OPENMP_OFFLOAD}
+OpenACC offload..: ${HAVE_OPENACC_OFFLOAD}
+cuBLAS offload...: ${HAVE_CUBLAS_OFFLOAD}
+Device pointers..: ${HAVE_DEVICE_POINTERS}
 
 Package features:
   ${ARGS}

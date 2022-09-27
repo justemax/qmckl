@@ -1,0 +1,1808 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2022-09-27 Tue 14:57 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BLAS functions</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="TREX CoE" />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .equation-container {
+    display: table;
+    text-align: center;
+    width: 100%;
+  }
+  .equation {
+    vertical-align: middle;
+  }
+  .equation-label {
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+  }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<link rel="stylesheet" title="Standard" href="qmckl.css" type="text/css" />
+
+<script type="text/javascript" src="org-info.js">
+/**
+ *
+ * @source: org-info.js
+ *
+ * @licstart  The following is the entire license notice for the
+ *  JavaScript code in org-info.js.
+ *
+ * Copyright (C) 2012-2020 Free Software Foundation, Inc.
+ *
+ *
+ * The JavaScript code in this tag is free software: you can
+ * redistribute it and/or modify it under the terms of the GNU
+ * General Public License (GNU GPL) as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.  The code is distributed WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+ *
+ * As additional permission under GNU GPL version 3 section 7, you
+ * may distribute non-source (e.g., minimized or compacted) forms of
+ * that code without the copy of the GNU GPL normally required by
+ * section 4, provided you include this license notice and a URL
+ * through which recipients can access the Corresponding Source.
+ *
+ * @licend  The above is the entire license notice
+ * for the JavaScript code in org-info.js.
+ *
+ */
+</script>
+
+<script type="text/javascript">
+
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+
+<!--/*--><![CDATA[/*><!--*/
+org_html_manager.set("TOC_DEPTH", "4");
+org_html_manager.set("LINK_HOME", "index.html");
+org_html_manager.set("LINK_UP", "");
+org_html_manager.set("LOCAL_TOC", "1");
+org_html_manager.set("VIEW_BUTTONS", "0");
+org_html_manager.set("MOUSE_HINT", "underline");
+org_html_manager.set("FIXED_TOC", "0");
+org_html_manager.set("TOC", "1");
+org_html_manager.set("VIEW", "info");
+org_html_manager.setup();  // activate after the parameters are set
+/*]]>*///-->
+</script>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href=""> UP </a>
+ |
+ <a accesskey="H" href="index.html"> HOME </a>
+</div><div id="content">
+<h1 class="title">BLAS functions</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orge00ff01">-</a></li>
+<li><a href="#org5f5a595">1. Data types</a>
+<ul>
+<li><a href="#org8cb9bc3">1.1. Vector</a></li>
+<li><a href="#org5378bda">1.2. Matrix</a></li>
+<li><a href="#org754856a">1.3. Tensor</a></li>
+<li><a href="#orge69210e">1.4. Reshaping</a>
+<ul>
+<li><a href="#org69bd3a3">1.4.1. Vector -&gt; Matrix</a></li>
+<li><a href="#org713659d">1.4.2. Vector -&gt; Tensor</a></li>
+<li><a href="#org56bbfbd">1.4.3. Matrix -&gt; Vector</a></li>
+<li><a href="#org1b76748">1.4.4. Matrix -&gt; Tensor</a></li>
+<li><a href="#orgab0b5c0">1.4.5. Tensor -&gt; Vector</a></li>
+<li><a href="#orgcf07ff9">1.4.6. Tensor -&gt; Matrix</a></li>
+</ul>
+</li>
+<li><a href="#orge125d88">1.5. Access macros</a></li>
+<li><a href="#org579859e">1.6. Set all elements</a>
+<ul>
+<li><a href="#org7390716">1.6.1. Vector</a></li>
+<li><a href="#org68d3e8e">1.6.2. Matrix</a></li>
+<li><a href="#org0089889">1.6.3. Tensor</a></li>
+</ul>
+</li>
+<li><a href="#org192043d">1.7. Copy to/from to <code>double*</code></a></li>
+</ul>
+</li>
+<li><a href="#org7226c8c">2. Matrix operations</a>
+<ul>
+<li><a href="#orgaa3b0a4">2.1. <code>qmckl_dgemm</code></a></li>
+<li><a href="#org59cc65f">2.2. <code>qmckl_dgemm_safe</code></a></li>
+<li><a href="#org0071fa4">2.3. <code>qmckl_matmul</code></a></li>
+<li><a href="#orgef88f70">2.4. <code>qmckl_adjugate</code></a></li>
+<li><a href="#org7f72993">2.5. <code>qmckl_adjugate_safe</code></a>
+<ul>
+<li><a href="#org9c0da76">2.5.1. C interface</a></li>
+</ul>
+</li>
+<li><a href="#org7a1aab7">2.6. <code>qmckl_transpose</code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orge00ff01" class="outline-2">
+<h2 id="orge00ff01">-</h2>
+<div class="outline-text-2" id="text-orge00ff01">
+<p>
+Basic linear algebra data types and operations are described in this file.
+The data types are private, so that HPC implementations can use
+whatever data structures they prefer.
+</p>
+
+<p>
+These data types are expected to be used internally in QMCkl. They
+are not intended to be passed to external codes.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org5f5a595" class="outline-2">
+<h2 id="org5f5a595"><span class="section-number-2">1</span> Data types</h2>
+<div class="outline-text-2" id="text-1">
+</div>
+<div id="outline-container-org8cb9bc3" class="outline-3">
+<h3 id="org8cb9bc3"><span class="section-number-3">1.1</span> Vector</h3>
+<div class="outline-text-3" id="text-1-1">
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Variable</th>
+<th scope="col" class="org-left">Type</th>
+<th scope="col" class="org-left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>size</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">Dimension of the vector</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>data</code></td>
+<td class="org-left"><code>double*</code></td>
+<td class="org-left">Elements</td>
+</tr>
+</tbody>
+</table>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_vector</span>
+<span style="color: #0000ff;">qmckl_vector_alloc</span>( <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                    <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size</span>);
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_vector</span>
+<span style="color: #0000ff;">qmckl_vector_alloc_device</span>( <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                           <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size</span>,
+                           <span style="color: #228b22;">int</span> <span style="color: #a0522d;">device_id</span>);
+</pre>
+</div>
+
+
+<p>
+Allocates a new vector. If the allocation failed the size is zero.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_vector_free</span>( <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                   <span style="color: #228b22;">qmckl_vector</span>* <span style="color: #a0522d;">vector</span>);
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_vector_free_device</span>( <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                          <span style="color: #228b22;">qmckl_vector</span>* <span style="color: #a0522d;">vector</span>,
+                              <span style="color: #228b22;">int</span> <span style="color: #a0522d;">device_id</span>);
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org5378bda" class="outline-3">
+<h3 id="org5378bda"><span class="section-number-3">1.2</span> Matrix</h3>
+<div class="outline-text-3" id="text-1-2">
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Variable</th>
+<th scope="col" class="org-left">Type</th>
+<th scope="col" class="org-left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>size</code></td>
+<td class="org-left"><code>int64_t[2]</code></td>
+<td class="org-left">Dimension of each component</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>data</code></td>
+<td class="org-left"><code>double*</code></td>
+<td class="org-left">Elements</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+The dimensions use Fortran ordering: two elements differing by one
+in the first dimension are consecutive in memory.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_matrix</span>
+<span style="color: #0000ff;">qmckl_matrix_alloc</span>( <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                    <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size1</span>,
+                    <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size2</span>);
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #483d8b;">#ifdef</span> HAVE_DEVICE_POINTERS
+<span style="color: #228b22;">qmckl_matrix</span>
+<span style="color: #0000ff;">qmckl_matrix_alloc_device</span>( <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                           <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size1</span>,
+                           <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size2</span>,
+                           <span style="color: #228b22;">int</span> <span style="color: #a0522d;">device_id</span>);
+<span style="color: #483d8b;">#endif</span>
+</pre>
+</div>
+
+
+<p>
+Allocates a new matrix. If the allocation failed the sizes are zero.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_matrix_free</span>( <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                   <span style="color: #228b22;">qmckl_matrix</span>* <span style="color: #a0522d;">matrix</span>);
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #483d8b;">#ifdef</span> HAVE_DEVICE_POINTERS
+<span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_matrix_free_device</span>( <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                          <span style="color: #228b22;">qmckl_matrix</span>* <span style="color: #a0522d;">matrix</span>,
+                          <span style="color: #228b22;">int</span> <span style="color: #a0522d;">device_id</span>);
+<span style="color: #483d8b;">#endif</span>
+</pre>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-org754856a" class="outline-3">
+<h3 id="org754856a"><span class="section-number-3">1.3</span> Tensor</h3>
+<div class="outline-text-3" id="text-1-3">
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Variable</th>
+<th scope="col" class="org-left">Type</th>
+<th scope="col" class="org-left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>order</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">Order of the tensor</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>size</code></td>
+<td class="org-left"><code>int64_t[QMCKL_TENSOR_ORDER_MAX]</code></td>
+<td class="org-left">Dimension of each component</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>data</code></td>
+<td class="org-left"><code>double*</code></td>
+<td class="org-left">Elements</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+The dimensions use Fortran ordering: two elements differing by one
+in the first dimension are consecutive in memory.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_tensor</span>
+<span style="color: #0000ff;">qmckl_tensor_alloc</span>( <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                    <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">order</span>,
+                    <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span>* <span style="color: #a0522d;">size</span>);
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #483d8b;">#ifdef</span> HAVE_DEVICE_POINTERS
+<span style="color: #228b22;">qmckl_tensor</span>
+<span style="color: #0000ff;">qmckl_tensor_alloc_device</span>( <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                           <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">order</span>,
+                           <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span>* <span style="color: #a0522d;">size</span>,
+                               <span style="color: #228b22;">int</span> <span style="color: #a0522d;">device_id</span>);
+<span style="color: #483d8b;">#endif</span>
+</pre>
+</div>
+
+<p>
+Allocates memory for a tensor. If the allocation failed, the size
+is zero.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_tensor_free</span> (<span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                   <span style="color: #228b22;">qmckl_tensor</span>* <span style="color: #a0522d;">tensor</span>);
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #483d8b;">#ifdef</span> HAVE_DEVICE_POINTERS
+<span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_tensor_free_device</span> (<span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                          <span style="color: #228b22;">qmckl_tensor</span>* <span style="color: #a0522d;">tensor</span>,
+                              <span style="color: #228b22;">int</span> <span style="color: #a0522d;">device_id</span>);
+<span style="color: #483d8b;">#endif</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orge69210e" class="outline-3">
+<h3 id="orge69210e"><span class="section-number-3">1.4</span> Reshaping</h3>
+<div class="outline-text-3" id="text-1-4">
+<p>
+Reshaping occurs in-place and the pointer to the data is copied.
+</p>
+</div>
+
+<div id="outline-container-org69bd3a3" class="outline-4">
+<h4 id="org69bd3a3"><span class="section-number-4">1.4.1</span> Vector -&gt; Matrix</h4>
+<div class="outline-text-4" id="text-1-4-1">
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_matrix</span>
+<span style="color: #0000ff;">qmckl_matrix_of_vector</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_vector</span> <span style="color: #a0522d;">vector</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size1</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size2</span>);
+</pre>
+</div>
+
+<p>
+Reshapes a vector into a matrix.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org713659d" class="outline-4">
+<h4 id="org713659d"><span class="section-number-4">1.4.2</span> Vector -&gt; Tensor</h4>
+<div class="outline-text-4" id="text-1-4-2">
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_tensor</span>
+<span style="color: #0000ff;">qmckl_tensor_of_vector</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_vector</span> <span style="color: #a0522d;">vector</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">order</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span>* <span style="color: #a0522d;">size</span>);
+</pre>
+</div>
+
+<p>
+Reshapes a vector into a tensor.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org56bbfbd" class="outline-4">
+<h4 id="org56bbfbd"><span class="section-number-4">1.4.3</span> Matrix -&gt; Vector</h4>
+<div class="outline-text-4" id="text-1-4-3">
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_vector</span>
+<span style="color: #0000ff;">qmckl_vector_of_matrix</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_matrix</span> <span style="color: #a0522d;">matrix</span>);
+</pre>
+</div>
+
+<p>
+Reshapes a matrix into a vector.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org1b76748" class="outline-4">
+<h4 id="org1b76748"><span class="section-number-4">1.4.4</span> Matrix -&gt; Tensor</h4>
+<div class="outline-text-4" id="text-1-4-4">
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_tensor</span>
+<span style="color: #0000ff;">qmckl_tensor_of_matrix</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_matrix</span> <span style="color: #a0522d;">matrix</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">order</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span>* <span style="color: #a0522d;">size</span>);
+</pre>
+</div>
+
+<p>
+Reshapes a matrix into a tensor.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgab0b5c0" class="outline-4">
+<h4 id="orgab0b5c0"><span class="section-number-4">1.4.5</span> Tensor -&gt; Vector</h4>
+<div class="outline-text-4" id="text-1-4-5">
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_vector</span>
+<span style="color: #0000ff;">qmckl_vector_of_tensor</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_tensor</span> <span style="color: #a0522d;">tensor</span>);
+</pre>
+</div>
+
+<p>
+Reshapes a tensor into a vector.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgcf07ff9" class="outline-4">
+<h4 id="orgcf07ff9"><span class="section-number-4">1.4.6</span> Tensor -&gt; Matrix</h4>
+<div class="outline-text-4" id="text-1-4-6">
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_matrix</span>
+<span style="color: #0000ff;">qmckl_matrix_of_tensor</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_tensor</span> <span style="color: #a0522d;">tensor</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size1</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size2</span>);
+</pre>
+</div>
+
+<p>
+Reshapes a tensor into a vector.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orge125d88" class="outline-3">
+<h3 id="orge125d88"><span class="section-number-3">1.5</span> Access macros</h3>
+<div class="outline-text-3" id="text-1-5">
+<p>
+Macros are provided to ease the access to vectors, matrices and
+tensors. Matrices use column-major ordering, as in Fortran.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">double</span> <span style="color: #0000ff;">qmckl_vec</span> (<span style="color: #228b22;">qmckl_vector</span> <span style="color: #a0522d;">v</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">i</span>);           //  <span style="color: #b22222;">v[i]</span>
+<span style="color: #228b22;">double</span> <span style="color: #0000ff;">qmckl_mat</span> (<span style="color: #228b22;">qmckl_matrix</span> <span style="color: #a0522d;">m</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">i</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">j</span>) // <span style="color: #b22222;">m[j][i]</span>
+
+<span style="color: #228b22;">double</span> <span style="color: #0000ff;">qmckl_ten3</span>(<span style="color: #228b22;">qmckl_tensor</span> <span style="color: #a0522d;">t</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">i</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">j</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">k</span>); // <span style="color: #b22222;">t[k][j][i]</span>
+<span style="color: #228b22;">double</span> <span style="color: #0000ff;">qmckl_ten4</span>(<span style="color: #228b22;">qmckl_tensor</span> <span style="color: #a0522d;">t</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">i</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">j</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">k</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">l</span>);
+<span style="color: #228b22;">double</span> <span style="color: #0000ff;">qmckl_ten5</span>(<span style="color: #228b22;">qmckl_tensor</span> <span style="color: #a0522d;">t</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">i</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">j</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">k</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">l</span>, <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">m</span>);
+...
+</pre>
+</div>
+
+<p>
+For example:
+</p>
+</div>
+</div>
+
+<div id="outline-container-org579859e" class="outline-3">
+<h3 id="org579859e"><span class="section-number-3">1.6</span> Set all elements</h3>
+<div class="outline-text-3" id="text-1-6">
+</div>
+<div id="outline-container-org7390716" class="outline-4">
+<h4 id="org7390716"><span class="section-number-4">1.6.1</span> Vector</h4>
+<div class="outline-text-4" id="text-1-6-1">
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_vector</span>
+<span style="color: #0000ff;">qmckl_vector_set</span>(<span style="color: #228b22;">qmckl_vector</span> <span style="color: #a0522d;">vector</span>, <span style="color: #228b22;">double</span> <span style="color: #a0522d;">value</span>);
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org68d3e8e" class="outline-4">
+<h4 id="org68d3e8e"><span class="section-number-4">1.6.2</span> Matrix</h4>
+<div class="outline-text-4" id="text-1-6-2">
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_matrix</span>
+<span style="color: #0000ff;">qmckl_matrix_set</span>(<span style="color: #228b22;">qmckl_matrix</span> <span style="color: #a0522d;">matrix</span>, <span style="color: #228b22;">double</span> <span style="color: #a0522d;">value</span>);
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #483d8b;">#ifdef</span> HAVE_DEVICE_POINTERS
+<span style="color: #228b22;">qmckl_matrix</span>
+<span style="color: #0000ff;">qmckl_matrix_set_device</span>(<span style="color: #228b22;">qmckl_matrix</span> <span style="color: #a0522d;">matrix</span>, <span style="color: #228b22;">double</span> <span style="color: #a0522d;">value</span>);
+<span style="color: #483d8b;">#endif</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org0089889" class="outline-4">
+<h4 id="org0089889"><span class="section-number-4">1.6.3</span> Tensor</h4>
+<div class="outline-text-4" id="text-1-6-3">
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_tensor</span>
+<span style="color: #0000ff;">qmckl_tensor_set</span>(<span style="color: #228b22;">qmckl_tensor</span> <span style="color: #a0522d;">tensor</span>, <span style="color: #228b22;">double</span> <span style="color: #a0522d;">value</span>);
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #483d8b;">#ifdef</span> HAVE_DEVICE_POINTERS
+<span style="color: #228b22;">qmckl_tensor</span>
+<span style="color: #0000ff;">qmckl_tensor_set_device</span>(<span style="color: #228b22;">qmckl_tensor</span> <span style="color: #a0522d;">tensor</span>, <span style="color: #228b22;">double</span> <span style="color: #a0522d;">value</span>);
+<span style="color: #483d8b;">#endif</span>
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org192043d" class="outline-3">
+<h3 id="org192043d"><span class="section-number-3">1.7</span> Copy to/from to <code>double*</code></h3>
+<div class="outline-text-3" id="text-1-7">
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_double_of_vector</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_vector</span> <span style="color: #a0522d;">vector</span>,
+                       <span style="color: #228b22;">double</span>* <span style="color: #a020f0;">const</span> <span style="color: #a0522d;">target</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size_max</span>);
+</pre>
+</div>
+
+<p>
+Converts a vector to a <code>double*</code>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_double_of_matrix</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_matrix</span> <span style="color: #a0522d;">matrix</span>,
+                       <span style="color: #228b22;">double</span>* <span style="color: #a020f0;">const</span> <span style="color: #a0522d;">target</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size_max</span>);
+</pre>
+</div>
+
+<p>
+Converts a matrix to a <code>double*</code>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_double_of_tensor</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_tensor</span> <span style="color: #a0522d;">tensor</span>,
+                       <span style="color: #228b22;">double</span>* <span style="color: #a020f0;">const</span> <span style="color: #a0522d;">target</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size_max</span>);
+</pre>
+</div>
+
+<p>
+Converts a tensor to a <code>double*</code>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_vector_of_double</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">double</span>* <span style="color: #a0522d;">target</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size_max</span>,
+                       <span style="color: #228b22;">qmckl_vector</span>* <span style="color: #a0522d;">vector</span>);
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #483d8b;">#ifdef</span> HAVE_DEVICE_POINTERS
+<span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_vector_of_double_device</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                              <span style="color: #a020f0;">const</span> <span style="color: #228b22;">double</span>* <span style="color: #a0522d;">target</span>,
+                              <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size_max</span>,
+                              <span style="color: #228b22;">qmckl_vector</span>* <span style="color: #a0522d;">vector</span>,
+                              <span style="color: #228b22;">int</span> <span style="color: #a0522d;">device_id</span>);
+<span style="color: #483d8b;">#endif</span>
+</pre>
+</div>
+
+<p>
+Converts a <code>double*</code> to a vector.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_matrix_of_double</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">double</span>* <span style="color: #a0522d;">target</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size_max</span>,
+                       <span style="color: #228b22;">qmckl_matrix</span>* <span style="color: #a0522d;">matrix</span>);
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #483d8b;">#ifdef</span> HAVE_DEVICE_POINTERS
+<span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_matrix_of_double_device</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                              <span style="color: #a020f0;">const</span> <span style="color: #228b22;">double</span>* <span style="color: #a0522d;">target</span>,
+                              <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size_max</span>,
+                              <span style="color: #228b22;">qmckl_matrix</span>* <span style="color: #a0522d;">matrix</span>,
+                              <span style="color: #228b22;">int</span> <span style="color: #a0522d;">device_id</span>);
+<span style="color: #483d8b;">#endif</span>
+</pre>
+</div>
+
+<p>
+Converts a <code>double*</code> to a matrix.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_tensor_of_double</span>(<span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">double</span>* <span style="color: #a0522d;">target</span>,
+                       <span style="color: #a020f0;">const</span> <span style="color: #228b22;">int64_t</span> <span style="color: #a0522d;">size_max</span>,
+                       <span style="color: #228b22;">qmckl_tensor</span>* <span style="color: #a0522d;">tensor</span>);
+</pre>
+</div>
+
+<p>
+Converts a <code>double*</code> to a tensor.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org7226c8c" class="outline-2">
+<h2 id="org7226c8c"><span class="section-number-2">2</span> Matrix operations</h2>
+<div class="outline-text-2" id="text-2">
+</div>
+<div id="outline-container-orgaa3b0a4" class="outline-3">
+<h3 id="orgaa3b0a4"><span class="section-number-3">2.1</span> <code>qmckl_dgemm</code></h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+Matrix multiplication with a BLAS interface:
+</p>
+
+<p>
+\[
+   C_{ij} = \beta C_{ij} + \alpha \sum_{k} A_{ik} \cdot B_{kj}
+   \]
+</p>
+
+<table id="org46f893f" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Variable</th>
+<th scope="col" class="org-left">Type</th>
+<th scope="col" class="org-left">In/Out</th>
+<th scope="col" class="org-left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>context</code></td>
+<td class="org-left"><code>qmckl_context</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Global state</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>TransA</code></td>
+<td class="org-left"><code>char</code></td>
+<td class="org-left">in</td>
+<td class="org-left">'T' is transposed</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>TransB</code></td>
+<td class="org-left"><code>char</code></td>
+<td class="org-left">in</td>
+<td class="org-left">'T' is transposed</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>m</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Number of rows of the input matrix</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>n</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Number of columns of the input matrix</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>k</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Number of columns of the input matrix</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>alpha</code></td>
+<td class="org-left"><code>double</code></td>
+<td class="org-left">in</td>
+<td class="org-left">&alpha;</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>A</code></td>
+<td class="org-left"><code>double[][lda]</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Array containing the matrix \(A\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>lda</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Leading dimension of array <code>A</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>B</code></td>
+<td class="org-left"><code>double[][ldb]</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Array containing the matrix \(B\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>ldb</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Leading dimension of array <code>B</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>beta</code></td>
+<td class="org-left"><code>double</code></td>
+<td class="org-left">in</td>
+<td class="org-left">&beta;</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>C</code></td>
+<td class="org-left"><code>double[][ldc]</code></td>
+<td class="org-left">out</td>
+<td class="org-left">Array containing the matrix \(C\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>ldc</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Leading dimension of array <code>C</code></td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Requirements:
+</p>
+
+<ul class="org-ul">
+<li><code>context</code> is not <code>QMCKL_NULL_CONTEXT</code></li>
+<li><code>m &gt; 0</code></li>
+<li><code>n &gt; 0</code></li>
+<li><code>k &gt; 0</code></li>
+<li><code>lda &gt;= m</code></li>
+<li><code>ldb &gt;= n</code></li>
+<li><code>ldc &gt;= n</code></li>
+<li><code>A</code> is allocated with at least \(m \times k \times 8\) bytes</li>
+<li><code>B</code> is allocated with at least \(k \times n \times 8\) bytes</li>
+<li><code>C</code> is allocated with at least \(m \times n \times 8\) bytes</li>
+</ul>
+
+<div class="org-src-container">
+<pre class="src src-c">
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org59cc65f" class="outline-3">
+<h3 id="org59cc65f"><span class="section-number-3">2.2</span> <code>qmckl_dgemm_safe</code></h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+"Size-safe" proxy function with the same functionality as <code>qmckl_dgemm</code>
+but with 3 additional arguments. These arguments <code>size_max_M</code> (where <code>M</code> is a matix)
+are required primarily for the Python API, where compatibility with
+NumPy arrays implies that sizes of the input and output arrays are provided.
+</p>
+
+<table id="org452a465" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Variable</th>
+<th scope="col" class="org-left">Type</th>
+<th scope="col" class="org-left">In/Out</th>
+<th scope="col" class="org-left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>context</code></td>
+<td class="org-left"><code>qmckl_context</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Global state</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>TransA</code></td>
+<td class="org-left"><code>char</code></td>
+<td class="org-left">in</td>
+<td class="org-left">'T' is transposed</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>TransB</code></td>
+<td class="org-left"><code>char</code></td>
+<td class="org-left">in</td>
+<td class="org-left">'T' is transposed</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>m</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Number of rows of the input matrix</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>n</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Number of columns of the input matrix</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>k</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Number of columns of the input matrix</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>alpha</code></td>
+<td class="org-left"><code>double</code></td>
+<td class="org-left">in</td>
+<td class="org-left">&alpha;</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>A</code></td>
+<td class="org-left"><code>double[][lda]</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Array containing the matrix \(A\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>size_max_A</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Size of the matrix \(A\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>lda</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Leading dimension of array <code>A</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>B</code></td>
+<td class="org-left"><code>double[][ldb]</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Array containing the matrix \(B\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>size_max_B</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Size of the matrix \(B\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>ldb</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Leading dimension of array <code>B</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>beta</code></td>
+<td class="org-left"><code>double</code></td>
+<td class="org-left">in</td>
+<td class="org-left">&beta;</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>C</code></td>
+<td class="org-left"><code>double[][ldc]</code></td>
+<td class="org-left">out</td>
+<td class="org-left">Array containing the matrix \(C\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>size_max_C</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Size of the matrix \(C\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>ldc</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Leading dimension of array <code>C</code></td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Requirements:
+</p>
+
+<ul class="org-ul">
+<li><code>context</code> is not <code>QMCKL_NULL_CONTEXT</code></li>
+<li><code>m &gt; 0</code></li>
+<li><code>n &gt; 0</code></li>
+<li><code>k &gt; 0</code></li>
+<li><code>lda &gt;= m</code></li>
+<li><code>ldb &gt;= n</code></li>
+<li><code>ldc &gt;= n</code></li>
+<li><code>A</code> is allocated with at least \(m \times k \times 8\) bytes</li>
+<li><code>B</code> is allocated with at least \(k \times n \times 8\) bytes</li>
+<li><code>C</code> is allocated with at least \(m \times n \times 8\) bytes</li>
+<li><code>size_max_A &gt;= m * k</code></li>
+<li><code>size_max_B &gt;= k * n</code></li>
+<li><code>size_max_C &gt;= m * n</code></li>
+</ul>
+
+<div class="org-src-container">
+<pre class="src src-c">
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org0071fa4" class="outline-3">
+<h3 id="org0071fa4"><span class="section-number-3">2.3</span> <code>qmckl_matmul</code></h3>
+<div class="outline-text-3" id="text-2-3">
+<p>
+Matrix multiplication using the <code>qmckl_matrix</code> data type:
+</p>
+
+<p>
+\[
+   C_{ij} = \beta C_{ij} + \alpha \sum_{k} A_{ik} \cdot B_{kj}
+   \]
+</p>
+
+<table id="org259c3a5" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Variable</th>
+<th scope="col" class="org-left">Type</th>
+<th scope="col" class="org-left">In/Out</th>
+<th scope="col" class="org-left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>context</code></td>
+<td class="org-left"><code>qmckl_context</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Global state</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>TransA</code></td>
+<td class="org-left"><code>char</code></td>
+<td class="org-left">in</td>
+<td class="org-left">'T' is transposed</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>TransB</code></td>
+<td class="org-left"><code>char</code></td>
+<td class="org-left">in</td>
+<td class="org-left">'T' is transposed</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>alpha</code></td>
+<td class="org-left"><code>double</code></td>
+<td class="org-left">in</td>
+<td class="org-left">&alpha;</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>A</code></td>
+<td class="org-left"><code>qmckl_matrix</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Matrix \(A\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>B</code></td>
+<td class="org-left"><code>qmckl_matrix</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Matrix \(B\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>beta</code></td>
+<td class="org-left"><code>double</code></td>
+<td class="org-left">in</td>
+<td class="org-left">&beta;</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>C</code></td>
+<td class="org-left"><code>qmckl_matrix</code></td>
+<td class="org-left">out</td>
+<td class="org-left">Matrix \(C\)</td>
+</tr>
+</tbody>
+</table>
+
+<div class="org-src-container">
+<pre class="src src-c">
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgef88f70" class="outline-3">
+<h3 id="orgef88f70"><span class="section-number-3">2.4</span> <code>qmckl_adjugate</code></h3>
+<div class="outline-text-3" id="text-2-4">
+<p>
+Given a matrix \(\mathbf{A}\), the adjugate matrix
+\(\text{adj}(\mathbf{A})\) is the transpose of the cofactors matrix
+of \(\mathbf{A}\).
+</p>
+
+<p>
+\[
+   \mathbf{B} = \text{adj}(\mathbf{A}) = \text{det}(\mathbf{A}) \, \mathbf{A}^{-1}
+   \]
+</p>
+
+<p>
+See also: <a href="https://en.wikipedia.org/wiki/Adjugate_matrix">https://en.wikipedia.org/wiki/Adjugate_matrix</a>
+</p>
+
+<table id="org46c1cdf" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Variable</th>
+<th scope="col" class="org-left">Type</th>
+<th scope="col" class="org-left">In/Out</th>
+<th scope="col" class="org-left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>context</code></td>
+<td class="org-left"><code>qmckl_context</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Global state</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>n</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Number of rows and columns of the input matrix</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>A</code></td>
+<td class="org-left"><code>double[][lda]</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Array containing the \(n \times n\) matrix \(A\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>lda</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Leading dimension of array <code>A</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>B</code></td>
+<td class="org-left"><code>double[][ldb]</code></td>
+<td class="org-left">out</td>
+<td class="org-left">Adjugate of \(A\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>ldb</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Leading dimension of array <code>B</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>det_l</code></td>
+<td class="org-left"><code>double</code></td>
+<td class="org-left">inout</td>
+<td class="org-left">determinant of \(A\)</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Requirements:
+</p>
+
+<ul class="org-ul">
+<li><code>context</code> is not <code>QMCKL_NULL_CONTEXT</code></li>
+<li><code>n &gt; 0</code></li>
+<li><code>lda &gt;= m</code></li>
+<li><code>A</code> is allocated with at least \(m \times m \times 8\) bytes</li>
+<li><code>ldb &gt;= m</code></li>
+<li><code>B</code> is allocated with at least \(m \times m \times 8\) bytes</li>
+</ul>
+
+<div class="org-src-container">
+<pre class="src src-c">
+</pre>
+</div>
+
+<p>
+For small matrices (&le; 5&times; 5), we use specialized routines
+for performance motivations. For larger sizes, we rely on the
+LAPACK library.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-f90"><span style="color: #a020f0;">subroutine</span> <span style="color: #0000ff;">adjugate_general</span>(context, na, A, LDA, B, LDB, det_l)
+  <span style="color: #a020f0;">use</span> <span style="color: #0000ff;">qmckl</span>
+  <span style="color: #a020f0;">implicit</span> <span style="color: #228b22;">none</span>
+  <span style="color: #228b22;">integer</span>(qmckl_context), <span style="color: #a020f0;">intent</span>(in) ::<span style="color: #a0522d;"> context</span>
+  <span style="color: #228b22;">double precision</span>, <span style="color: #a020f0;">intent</span>(in)       ::<span style="color: #a0522d;"> A (LDA,na)</span>
+  <span style="color: #228b22;">integer</span>*8, <span style="color: #a020f0;">intent</span>(in)              ::<span style="color: #a0522d;"> LDA</span>
+  <span style="color: #228b22;">double precision</span>, <span style="color: #a020f0;">intent</span>(out)      ::<span style="color: #a0522d;"> B (LDB,na)</span>
+  <span style="color: #228b22;">integer</span>*8, <span style="color: #a020f0;">intent</span>(in)              ::<span style="color: #a0522d;"> LDB</span>
+  <span style="color: #228b22;">integer</span>*8, <span style="color: #a020f0;">intent</span>(in)              ::<span style="color: #a0522d;"> na</span>
+  <span style="color: #228b22;">double precision</span>, <span style="color: #a020f0;">intent</span>(inout)    ::<span style="color: #a0522d;"> det_l</span>
+
+  <span style="color: #228b22;">double precision</span> ::<span style="color: #a0522d;"> work(LDA*max(na,64))</span>
+  <span style="color: #228b22;">integer</span>          ::<span style="color: #a0522d;"> inf</span>
+  <span style="color: #228b22;">integer</span>          ::<span style="color: #a0522d;"> ipiv(LDA)</span>
+  <span style="color: #228b22;">integer</span>          ::<span style="color: #a0522d;"> lwork</span>
+  <span style="color: #228b22;">integer</span>(8)       ::<span style="color: #a0522d;"> i, j</span>
+
+</pre>
+</div>
+
+<p>
+We first copy the array <code>A</code> into array <code>B</code>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-f90">B(1:na,1:na) = A(1:na,1:na)
+</pre>
+</div>
+
+<p>
+Then, we compute the LU factorization \(LU=A\)
+using the <code>dgetrf</code> routine.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-f90"><span style="color: #a020f0;">call</span> <span style="color: #0000ff;">dgetrf</span>(na, na, B, LDB, ipiv, inf )
+</pre>
+</div>
+
+<p>
+By convention, the determinant of \(L\) is equal to one, so the
+determinant of \(A\) is equal to the determinant of \(U\), which is
+simply computed as the product of its diagonal elements.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-f90">det_l = 1.d0
+j=0_8
+<span style="color: #a020f0;">do</span> i=1,na
+ j = j+<span style="color: #a020f0;">min</span>(<span style="color: #a020f0;">abs</span>(ipiv(i)-i),1)
+ det_l = det_l*B(i,i)
+<span style="color: #a020f0;">enddo</span>
+</pre>
+</div>
+
+<p>
+As <code>dgetrf</code> returns \(PLU=A\) where \(P\) is a permutation matrix, the
+sign of the determinant is computed as \(-1^m\) where \(m\) is the
+number of permutations.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-f90"><span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">iand</span>(j,1_8) /= 0_8)  <span style="color: #a020f0;">then</span>
+  det_l = -det_l
+<span style="color: #a020f0;">endif</span>
+</pre>
+</div>
+
+<p>
+Then, the inverse of \(A\) is computed using <code>dgetri</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-f90">lwork = <span style="color: #a020f0;">SIZE</span>(work)
+<span style="color: #a020f0;">call</span> <span style="color: #0000ff;">dgetri</span>(na, B, LDB, ipiv, work, lwork, inf )
+</pre>
+</div>
+
+<p>
+and the adjugate matrix is computed as the product of the
+determinant with the inverse:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-f90">  B(:,:) = B(:,:)*det_l
+
+<span style="color: #a020f0;">end subroutine</span> <span style="color: #0000ff;">adjugate_general</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org7f72993" class="outline-3">
+<h3 id="org7f72993"><span class="section-number-3">2.5</span> <code>qmckl_adjugate_safe</code></h3>
+<div class="outline-text-3" id="text-2-5">
+<p>
+"Size-safe" proxy function with the same functionality as <code>qmckl_adjugate</code>
+but with 2 additional arguments. These arguments <code>size_max_M</code> (where <code>M</code> is a matix)
+are required primarily for the Python API, where compatibility with
+NumPy arrays implies that sizes of the input and output arrays are provided.
+</p>
+
+
+<table id="org5449a53" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Variable</th>
+<th scope="col" class="org-left">Type</th>
+<th scope="col" class="org-left">In/Out</th>
+<th scope="col" class="org-left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>context</code></td>
+<td class="org-left"><code>qmckl_context</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Global state</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>n</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Number of rows and columns of the input matrix</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>A</code></td>
+<td class="org-left"><code>double[][lda]</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Array containing the \(n \times n\) matrix \(A\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>size_max_A</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Size of the matrix \(A\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>lda</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Leading dimension of array <code>A</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>B</code></td>
+<td class="org-left"><code>double[][ldb]</code></td>
+<td class="org-left">out</td>
+<td class="org-left">Adjugate of \(A\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>size_max_B</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Size of the matrix \(B\)</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>ldb</code></td>
+<td class="org-left"><code>int64_t</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Leading dimension of array <code>B</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>det_l</code></td>
+<td class="org-left"><code>double</code></td>
+<td class="org-left">inout</td>
+<td class="org-left">determinant of \(A\)</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Requirements:
+</p>
+
+<ul class="org-ul">
+<li><code>context</code> is not <code>QMCKL_NULL_CONTEXT</code></li>
+<li><code>n &gt; 0</code></li>
+<li><code>lda &gt;= m</code></li>
+<li><code>A</code> is allocated with at least \(m \times m \times 8\) bytes</li>
+<li><code>ldb &gt;= m</code></li>
+<li><code>B</code> is allocated with at least \(m \times m \times 8\) bytes</li>
+<li><code>size_max_A &gt;= m * m</code></li>
+<li><code>size_max_B &gt;= m * m</code></li>
+</ul>
+
+<div class="org-src-container">
+<pre class="src src-c">
+</pre>
+</div>
+
+<p>
+For small matrices (&le; 5&times; 5), we use specialized routines
+for performance motivations. For larger sizes, we rely on the
+LAPACK library.
+</p>
+</div>
+
+<div id="outline-container-org9c0da76" class="outline-4">
+<h4 id="org9c0da76"><span class="section-number-4">2.5.1</span> C interface</h4>
+</div>
+</div>
+
+<div id="outline-container-org7a1aab7" class="outline-3">
+<h3 id="org7a1aab7"><span class="section-number-3">2.6</span> <code>qmckl_transpose</code></h3>
+<div class="outline-text-3" id="text-2-6">
+<p>
+Transposes a matrix: \(A^\dagger_{ji} = A_{ij}\).
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Variable</th>
+<th scope="col" class="org-left">Type</th>
+<th scope="col" class="org-left">In/Out</th>
+<th scope="col" class="org-left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>context</code></td>
+<td class="org-left"><code>qmckl_context</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Global state</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>A</code></td>
+<td class="org-left"><code>qmckl_matrix</code></td>
+<td class="org-left">in</td>
+<td class="org-left">Input matrix</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>At</code></td>
+<td class="org-left"><code>qmckl_matrix</code></td>
+<td class="org-left">out</td>
+<td class="org-left">Transposed matrix</td>
+</tr>
+</tbody>
+</table>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_transpose</span> (<span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                 <span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_matrix</span> <span style="color: #a0522d;">A</span>,
+                 <span style="color: #228b22;">qmckl_matrix</span> <span style="color: #a0522d;">At</span> );
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #483d8b;">#ifdef</span> HAVE_DEVICE_POINTERS
+<span style="color: #228b22;">qmckl_exit_code</span>
+<span style="color: #0000ff;">qmckl_transpose_device</span> (<span style="color: #228b22;">qmckl_context</span> <span style="color: #a0522d;">context</span>,
+                        <span style="color: #a020f0;">const</span> <span style="color: #228b22;">qmckl_matrix</span> <span style="color: #a0522d;">A</span>,
+                        <span style="color: #228b22;">qmckl_matrix</span> <span style="color: #a0522d;">At</span> );
+<span style="color: #483d8b;">#endif</span>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: TREX CoE</p>
+<p class="date">Created: 2022-09-27 Tue 14:57</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

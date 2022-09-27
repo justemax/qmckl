@@ -9,37 +9,11 @@ Functions for the computation of distances between particles.
 (org-babel-lob-ingest "../tools/lib.org")
 #+end_src
 
-  #+begin_src c :comments link :tangle (eval c) :noweb yes
-#include "qmckl.h"
-#include "assert.h"
-#include <stdio.h>
-#include <math.h>
-
-
-#include "qmckl.h"
-#include "qmckl_context_private_type.h"
-#include "qmckl_memory_private_type.h"
-#include "qmckl_memory_private_func.h"
-#include "qmckl_electron_private_func.h"
-
-  #+end_src
-
-
   #+begin_src c :comments link :tangle (eval c_test) :noweb yes
 #include "qmckl.h"
 #include "assert.h"
 #include <stdio.h>
 #include <math.h>
-
-
-#include "qmckl.h"
-#include "qmckl_context_private_type.h"
-#include "qmckl_memory_private_type.h"
-#include "qmckl_memory_private_func.h"
-#include "qmckl_electron_private_func.h"
-
-
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -49,6 +23,29 @@ int main() {
 
 
   #+end_src
+
+  #+begin_src c :tangle (eval c)
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#elif HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <assert.h>
+#include <math.h>
+
+#include <stdio.h>
+
+#include "qmckl.h"
+  #+end_src
+
 
 * Squared distance
 
@@ -160,7 +157,7 @@ integer function qmckl_distance_sq_f(context, transa, transb, m, n, &
 
   if (transb == 'N' .or. transb == 'n') then
      continue
-  else if (transa == 'T' .or. transa == 't') then
+  else if (transb == 'T' .or. transb == 't') then
      transab = transab + 2
   else
      transab = -100
@@ -512,26 +509,10 @@ end function test_qmckl_distance_sq
           const int64_t ldc ); 
     #+end_src
 
-
-
-
-    #+begin_src c :tangle (eval h_func) :comments org
-    qmckl_exit_code qmckl_distance_c (
-          const qmckl_context context,
-          const char transa,
-          const char transb,
-          const int64_t m,
-          const int64_t n,
-          const double* A,
-          const int64_t lda,
-          const double* B,
-          const int64_t ldb,
-          double* const C,
-          const int64_t ldc );
-    #+end_src
-
-
 *** Source
+
+**** CPU
+
     #+begin_src f90 :tangle (eval f)
 integer function qmckl_distance_f(context, transa, transb, m, n, &
      A, LDA, B, LDB, C, LDC) &
@@ -579,7 +560,7 @@ integer function qmckl_distance_f(context, transa, transb, m, n, &
 
   if (transb == 'N' .or. transb == 'n') then
      continue
-  else if (transa == 'T' .or. transa == 't') then
+  else if (transb == 'T' .or. transb == 't') then
      transab = transab + 2
   else
      transab = -100
@@ -685,59 +666,66 @@ integer function qmckl_distance_f(context, transa, transb, m, n, &
            y = A(i,2) - B(j,2)
            z = A(i,3) - B(j,3)
            C(i,j) = x*x + y*y + z*z
-           print *,j
-           print *,i
-           print *,A(i,1)
-           print *,B(j,1)
-           print *,A(i,2)
-           print *,B(j,2)
-           print *,A(i,3)
-           print *,B(j,3)
-           print *,"next step"
-
-           print *,C(i,j)
         end do
         C(:,j) = dsqrt(C(:,j))
      end do
 
   end select
 
-
 end function qmckl_distance_f
     #+end_src
 
 
-#+begin_src c :tangle (eval c) :comments org
-qmckl_exit_code qmckl_distance_c (
-                                  const qmckl_context context,
-                                  const char transa,
-                                  const char transb,
-                                  const int64_t m,
-                                  const int64_t n,
-                                  const double* A,
-                                  const int64_t lda,
-                                  const double* B,
-                                  const int64_t ldb,
-                                  double* const C,
-                                  const int64_t ldc ){
+**** Device
 
+    #+begin_src c :tangle (eval h_func) :comments org
+#ifdef HAVE_DEVICE_POINTERS
+qmckl_exit_code qmckl_distance_device (
+          const qmckl_context context,
+          const char transa,
+          const char transb,
+          const int64_t m,
+          const int64_t n,
+          const double* A,
+          const int64_t lda,
+          const double* B,
+          const int64_t ldb,
+          double* const C,
+          const int64_t ldc,
+          int device_id
+);
+#endif
+    #+end_src
+
+
+  #+begin_src c :tangle (eval c)
+#ifdef HAVE_DEVICE_POINTERS
+qmckl_exit_code qmckl_distance_device (
+    const qmckl_context context,
+    const char transa,
+    const char transb,
+    const int64_t m,
+    const int64_t n,
+    const double* A,
+    const int64_t lda,
+    const double* B,
+    const int64_t ldb,
+    double* const C,
+    const int64_t ldc,
+    int device_id
+) {
   uint64_t transab;
   double x,y,z;
 
-  printf("Ok je rentre dans qmckl distance version c \n");
-
   if (context == QMCKL_NULL_CONTEXT){
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_CONTEXT;
   }
 
   if(m <= 1e-5){
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_ARG_4;
   }
 
   if(n <= 1e-5){
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_ARG_5;
   }
 
@@ -759,63 +747,51 @@ qmckl_exit_code qmckl_distance_c (
   }else{
     transab = -100;
   }
-  if (transab < 0){
-    return QMCKL_INVALID_ARG_1;
-  }
-
-  printf("Transab = %d\n", transab);
 
   // check for LDA
   if (transab & 1 == 0 && lda < 3) {
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_ARG_7;
   }
 
   if (transab & 1 == 1 && lda < m) {
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_ARG_7;
   }
 
   if (transab & 2 == 0 && lda < 3) {
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_ARG_7;
   }
 
   if (transab & 2 == 2 && lda < m) {
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_ARG_7;
   }
 
   // check for LDB
   if (transab & 1 == 0 && ldb < 3) {
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_ARG_9;
   }
 
   if (transab & 1 == 1 && ldb < n) {
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_ARG_9;
   }
 
   if (transab & 2 == 0 && ldb < 3) {
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_ARG_9;
   }
 
   if (transab & 2 == 2 && ldb < n) {
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_ARG_9;
   }
   // check for LDC
   if (ldc < m) {
-    printf("Return error from distance c\n");
     return QMCKL_INVALID_ARG_11;
   }
-
 
   switch(transab)
     {
     case(0):
+      #pragma omp target is_device_ptr(A, B, C)
+      {
+      #pragma omp teams distribute parallel for simd
       for(int j = 0; j < n; j++){
         for(int i = 0; j < m; i++){
           x = A[i * 3 + 0] - B[j * 3 + 0];
@@ -825,10 +801,14 @@ qmckl_exit_code qmckl_distance_c (
           C[j * n + i] = sqrt(x*x + y*y + z*z);
         }
       }
+      }
       break;
 
     case(1):
-      for(int j = 0; j < n; j++){
+     #pragma omp target is_device_ptr(A, B, C)
+     {
+     #pragma omp teams distribute parallel for simd
+     for(int j = 0; j < n; j++){
         for(int i = 0; i < m; i++){
           x = A[0 * lda + i] - B[j * 3 + 0];
           y = A[1 * lda + i] - B[j * 3 + 1];
@@ -837,9 +817,13 @@ qmckl_exit_code qmckl_distance_c (
           C[j * n + i] = sqrt(x*x + y*y + z*z);
         }
       }
+      }
       break;
 
     case(2):
+      #pragma omp target is_device_ptr(A, B, C)
+      {
+      #pragma omp teams distribute parallel for simd
       for(int j = 0; j < n; j++){
         for(int i = 0; i < m; i++){
           x = A[i * 3 + 0] - B[0 * ldb + j];
@@ -849,37 +833,33 @@ qmckl_exit_code qmckl_distance_c (
           C[j * n + i] = sqrt(x*x + y*y + z*z);
         }
       }
+      }
       break;
 
     case(3):
+      #pragma omp target is_device_ptr(A, B, C)
+      {
+      #pragma omp teams distribute parallel for simd
       for(int j = 0; j < n; j++){
         for(int i = 0; i < m; i++){
           x = A[0 * lda + i] - B[0 * ldb + j];
           y = A[1 * lda + i] - B[1 * ldb + j];
           z = A[2 * lda + i] - B[2 * ldb + j];
 
-          printf("%d\n%d\n", j, i);
-          printf("%lf\n%lf\n", A[0 * lda + i], B[0 *ldb + j]);
-          printf("%lf\n%lf\n", A[1 * lda + i], B[1 *ldb + j]);
-          printf("%lf\n%lf\n", A[2 * lda + i], B[2 *ldb + j]);
-          printf("%lf\n", (x*x) + (y*y) + (z*z));
-          printf("next step\n");
           C[j * n + i] = sqrt((x*x) + (y*y) + (z*z));
         }
+      }
       }
       break;
     }
 
-  printf("Value of C 1 inside C loop : %lf", C[1]);
-
-  printf("ok fini le bordel\n");
 
   return QMCKL_SUCCESS;
 
-
-
 }
-#+end_src
+#endif
+    #+end_src
+
 
 
 *** Performance
@@ -945,8 +925,6 @@ qmckl_exit_code qmckl_distance_c (
      end function qmckl_distance
    end interface
    #+end_src
-
-
 
 *** Test                                                           :noexport:
     #+begin_src f90 :tangle (eval f_test)
@@ -1550,7 +1528,7 @@ integer function qmckl_distance_rescaled_deriv_e_f(context, transa, transb, m, n
 
   if (transb == 'N' .or. transb == 'n') then
      continue
-  else if (transa == 'T' .or. transa == 't') then
+  else if (transb == 'T' .or. transb == 't') then
      transab = transab + 2
   else
      transab = -100

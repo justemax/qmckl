@@ -1,0 +1,387 @@
+Loading /etc/emacs/site-start.d/00debian.el (source)...
+Loading /etc/emacs/site-start.d/50autoconf.el (source)...
+Loading /etc/emacs/site-start.d/50cmake-data.el (source)...
+Loading /etc/emacs/site-start.d/50dictionaries-common.el (source)...
+Loading debian-ispell...
+Loading /var/cache/dictionaries-common/emacsen-ispell-default.el (source)...
+Loading /var/cache/dictionaries-common/emacsen-ispell-dicts.el (source)...
+11 source blocks added to Library of Babel
+Could not read org-id-values from ~/.emacs.d/.org-id-locations.  Setting it to nil.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_ao_polynomial_vgl"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_ao_polynomial_vgl"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+executing Python code block...
+Code block evaluation complete.
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"FRetType")
+
+(key '"FRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"FRetType")
+
+(key '"FRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"FRetType")
+
+(key '"FRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"FRetType")
+
+(key '"FRetType")
+
+(key '"CRetType")
+
+(key '"CRetType")

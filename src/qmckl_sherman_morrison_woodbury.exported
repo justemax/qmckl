@@ -1,0 +1,294 @@
+Loading /etc/emacs/site-start.d/00debian.el (source)...
+Loading /etc/emacs/site-start.d/50autoconf.el (source)...
+Loading /etc/emacs/site-start.d/50cmake-data.el (source)...
+Loading /etc/emacs/site-start.d/50dictionaries-common.el (source)...
+Loading debian-ispell...
+Loading /var/cache/dictionaries-common/emacsen-ispell-default.el (source)...
+Loading /var/cache/dictionaries-common/emacsen-ispell-dicts.el (source)...
+11 source blocks added to Library of Babel
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_woodbury_2"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_woodbury_2"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_woodbury_3"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_woodbury_3"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison_splitting"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison_splitting"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison_smw32s"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison_smw32s"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"double"
+executing Elisp code block (get_value)...
+
+"qmckl_slagel_splitting"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_woodbury_2"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_woodbury_2"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_woodbury_3"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_woodbury_3"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison_splitting"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison_splitting"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison_smw32s"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_sherman_morrison_smw32s"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"double"
+executing Elisp code block (get_value)...
+
+"qmckl_slagel_splitting"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"FRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")

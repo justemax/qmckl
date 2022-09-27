@@ -104,7 +104,6 @@ typedef struct qmckl_nucleus_struct {
   int32_t      uninitialized;
   bool         provided;
 } qmckl_nucleus_struct;
-
    #+end_src
 
    The ~uninitialized~ integer contains one bit set to one for each
@@ -422,10 +421,20 @@ bool qmckl_nucleus_provided(const qmckl_context context) {
    #+NAME:pre2
    #+begin_src c :exports none
 if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
-  return QMCKL_NULL_CONTEXT;
- }
+    return qmckl_failwith( context,
+                           QMCKL_NULL_CONTEXT,
+                           "qmckl_set_nucleus_*",
+                           NULL);
+}
 
 qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+
+if (mask != 0 && !(ctx->nucleus.uninitialized & mask)) {
+    return qmckl_failwith( context,
+                           QMCKL_ALREADY_SET,
+                           "qmckl_set_nucleus_*",
+                           NULL);
+}
    #+end_src
 
    #+NAME:post2
@@ -452,6 +461,8 @@ qmckl_exit_code
 qmckl_set_nucleus_num(qmckl_context context,
                       const int64_t num)
 {
+  int32_t mask = 1 << 0;
+
   <<pre2>>
 
   if (num <= 0) {
@@ -460,8 +471,6 @@ qmckl_set_nucleus_num(qmckl_context context,
                            "qmckl_set_nucleus_num",
                            "num <= 0");
   }
-
-  int32_t mask = 1 << 0;
 
   ctx->nucleus.num = num;
 
@@ -490,6 +499,16 @@ qmckl_set_nucleus_charge(qmckl_context context,
                          const int64_t size_max);
    #+end_src
 
+   #+begin_src c :comments org :tangle (eval h_func)
+#ifdef HAVE_DEVICE_POINTERS
+qmckl_exit_code
+qmckl_set_nucleus_charge_device(qmckl_context context,
+                                const double* charge,
+                                const int64_t size_max,
+								int device_id);
+#endif
+   #+end_src
+
     Sets the nuclear charges of all the atoms.
 
    #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
@@ -498,6 +517,8 @@ qmckl_set_nucleus_charge(qmckl_context context,
                          const double* charge,
                          const int64_t size_max)
 {
+  int32_t mask = 1 << 1;
+
   <<pre2>>
 
   if (charge == NULL) {
@@ -509,8 +530,6 @@ qmckl_set_nucleus_charge(qmckl_context context,
 
   int64_t num;
   qmckl_exit_code rc;
-
-  int32_t mask = 1 << 1;
 
   rc = qmckl_get_nucleus_num(context, &num);
   if (rc != QMCKL_SUCCESS) return rc;
@@ -533,6 +552,56 @@ qmckl_set_nucleus_charge(qmckl_context context,
 
   <<post2>>
 }
+    #+end_src
+
+   #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+#ifdef HAVE_DEVICE_POINTERS
+qmckl_exit_code
+qmckl_set_nucleus_charge_device(qmckl_context context,
+                                const double* charge,
+                                const int64_t size_max,
+                                int device_id)
+{
+
+  int32_t mask = 1 << 1;
+
+  <<pre2>>
+
+  // This accepts a host pointer and copies it in context as a device pointer
+
+  if (charge == NULL) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_2,
+                           "qmckl_set_nucleus_charge",
+                           "charge is a null pointer");
+  }
+
+  int64_t num;
+  qmckl_exit_code rc;
+
+  rc = qmckl_get_nucleus_num(context, &num);
+  if (rc != QMCKL_SUCCESS) return rc;
+
+  if (num > size_max) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_3,
+                           "qmckl_set_nucleus_charge",
+                           "Array too small");
+  }
+
+  ctx->nucleus.charge = qmckl_vector_alloc_device(context, num, device_id);
+  rc = qmckl_vector_of_double_device(context, charge, num, &(ctx->nucleus.charge), device_id);
+
+  if (rc != QMCKL_SUCCESS) {
+    return qmckl_failwith( context,
+                           QMCKL_FAILURE,
+                           "qmckl_set_nucleus_charge",
+                           "Error in vector->double* conversion");
+  }
+
+  <<post2>>
+}
+#endif
     #+end_src
 
     #+begin_src f90 :tangle (eval fh_func) :comments org :exports none
@@ -559,6 +628,17 @@ qmckl_set_nucleus_coord(qmckl_context context,
                         const int64_t size_max);
    #+end_src
 
+    #+begin_src c :comments org :tangle (eval h_func)
+#ifdef HAVE_DEVICE_POINTERS
+qmckl_exit_code
+qmckl_set_nucleus_coord_device(qmckl_context context,
+                               const char transp,
+                               const double* coord,
+                               const int64_t size_max,
+							   int device_id);
+#endif
+   #+end_src
+
     Sets the nuclear coordinates of all the atoms. The coordinates
     are be given in atomic units.
 
@@ -569,11 +649,11 @@ qmckl_set_nucleus_coord(qmckl_context context,
                         const double* coord,
                         const int64_t size_max)
 {
+  int32_t mask = 1 << 2;
+
   <<pre2>>
 
   qmckl_exit_code rc;
-
-  int32_t mask = 1 << 2;
 
   const int64_t nucl_num = (int64_t) ctx->nucleus.num;
 
@@ -613,6 +693,60 @@ qmckl_set_nucleus_coord(qmckl_context context,
 }
     #+end_src
 
+   #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+#ifdef HAVE_DEVICE_POINTERS
+qmckl_exit_code
+qmckl_set_nucleus_coord_device (qmckl_context context,
+                                const char transp,
+                                const double* coord,
+                                const int64_t size_max,
+                                int32_t device_id)
+{
+  int32_t mask = 1 << 2;
+
+  <<pre2>>
+
+  qmckl_exit_code rc;
+
+  const int64_t nucl_num = (int64_t) ctx->nucleus.num;
+
+  if (ctx->nucleus.coord.data != NULL) {
+    rc = qmckl_matrix_free_device(context, &(ctx->nucleus.coord), device_id);
+    if (rc != QMCKL_SUCCESS) return rc;
+  }
+
+  ctx->nucleus.coord = qmckl_matrix_alloc_device(context, nucl_num, 3, device_id);
+
+  if (ctx->nucleus.coord.data == NULL) {
+    return qmckl_failwith( context,
+                           QMCKL_ALLOCATION_FAILED,
+                           "qmckl_set_nucleus_coord_device",
+                           NULL);
+  }
+
+  if (size_max < 3*nucl_num) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_ARG_4,
+                           "qmckl_set_nucleus_coord_device",
+                           "Array too small");
+  }
+
+  if (transp == 'N') {
+    qmckl_matrix At;
+    At = qmckl_matrix_alloc_device(context, 3, nucl_num, device_id);
+    rc = qmckl_matrix_of_double_device(context, coord, 3*nucl_num, &At, device_id);
+    if (rc != QMCKL_SUCCESS) return rc;
+    rc = qmckl_transpose_device(context, At, ctx->nucleus.coord);
+  } else {
+    rc = qmckl_matrix_of_double_device(context, coord, nucl_num*3, &(ctx->nucleus.coord), device_id);
+  }
+  if (rc != QMCKL_SUCCESS) return rc;
+
+  <<post2>>
+}
+#endif
+    #+end_src
+
     #+begin_src f90 :tangle (eval fh_func) :comments org :exports none
 interface
   integer(c_int32_t) function qmckl_set_nucleus_coord(context, transp, coord, size_max) &
@@ -628,6 +762,24 @@ interface
 end interface
     #+end_src
 
+    #+begin_src f90 :tangle (eval fh_func) :comments org :exports none
+#ifdef HAVE_DEVICE_POINTERS
+interface
+  integer(c_int32_t) function qmckl_set_nucleus_coord_device(context, transp, coord, size_max, device_id) &
+    bind(C)
+    use, intrinsic :: iso_c_binding
+    import
+    implicit none
+    integer (c_int64_t) , intent(in)  , value :: context
+    character(c_char)   , intent(in)  , value :: transp
+    real    (c_double)  , intent(in)          :: coord(*)
+    integer (c_int64_t) , intent(in)  , value :: size_max
+	integer (c_int32_t) , intent(in)  , value :: device_id
+  end function qmckl_set_nucleus_coord_device
+end interface
+#endif
+    #+end_src
+
    #+begin_src c :comments org :tangle (eval h_func)
 qmckl_exit_code
 qmckl_set_nucleus_rescale_factor(qmckl_context context,
@@ -641,6 +793,8 @@ qmckl_exit_code
 qmckl_set_nucleus_rescale_factor(qmckl_context context,
                                  const double rescale_factor_kappa)
 {
+  int32_t mask = 0; // Can be updated
+  
   <<pre2>>
 
   if (rescale_factor_kappa <= 0.0) {

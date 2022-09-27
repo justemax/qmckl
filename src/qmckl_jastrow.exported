@@ -1,0 +1,286 @@
+Loading /etc/emacs/site-start.d/00debian.el (source)...
+Loading /etc/emacs/site-start.d/50autoconf.el (source)...
+Loading /etc/emacs/site-start.d/50cmake-data.el (source)...
+Loading /etc/emacs/site-start.d/50dictionaries-common.el (source)...
+Loading debian-ispell...
+Loading /var/cache/dictionaries-common/emacsen-ispell-default.el (source)...
+Loading /var/cache/dictionaries-common/emacsen-ispell-dicts.el (source)...
+11 source blocks added to Library of Babel
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_compute_factor_en_deriv_e"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_compute_factor_een_naive"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_compute_factor_een"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_compute_factor_een_deriv_e_naive"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_compute_factor_en_deriv_e"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_compute_factor_een_naive"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_compute_factor_een"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+"qmckl_exit_code"
+executing Elisp code block (get_value)...
+
+"qmckl_compute_factor_een_deriv_e_naive"
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+executing Elisp code block (get_value)...
+
+nil
+executing Elisp code block (get_value)...
+
+nil
+executing Python code block...
+Babel evaluation exited with code 1
+Code block evaluation complete.
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"FRetType")
+
+(key '"CRetType")
+
+(key '"FRetType")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"FRetType")
+
+(key '"CRetType")
+
+(key '"FRetType")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
+
+(key '"CRetType")
+
+(key '"Name")
