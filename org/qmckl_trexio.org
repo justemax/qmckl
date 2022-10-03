@@ -285,11 +285,6 @@ qmckl_trexio_read_nucleus_X_device(qmckl_context context, trexio_t* const file, 
 
   qmckl_exit_code rc;
   int rcio = 0;
-   #+end_src
-
-*** Number of nuclei
-
-   #+begin_src c :tangle (eval c)
   int64_t nucleus_num = 0L;
 
   rcio = trexio_read_nucleus_num_64(file, &nucleus_num);
@@ -305,11 +300,6 @@ qmckl_trexio_read_nucleus_X_device(qmckl_context context, trexio_t* const file, 
 
   if (rc != QMCKL_SUCCESS)
     return rc;
-   #+end_src
-
-*** Nuclear charges
-
-   #+begin_src c :tangle (eval c)
   {
     qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
     mem_info.size = nucleus_num * sizeof(double);
@@ -342,14 +332,6 @@ qmckl_trexio_read_nucleus_X_device(qmckl_context context, trexio_t* const file, 
       return rc;
 
   }
-   #+end_src
-
-*** Nuclear coordinates
-
-    Now, we read the molecular geometry. It is stored in normal format
-    in the TREXIO file (~'N'~), so it will be automatically transposed internally.
-
-   #+begin_src c :tangle (eval c)
   {
     qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
     mem_info.size = nucleus_num * 3 * sizeof(double);
@@ -382,11 +364,6 @@ qmckl_trexio_read_nucleus_X_device(qmckl_context context, trexio_t* const file, 
       return rc;
     }
   }
-   #+end_src
-
-
-   #+begin_src c :tangle (eval c)
-
   return QMCKL_SUCCESS;
 }
 #endif
@@ -2079,11 +2056,14 @@ qmckl_trexio_read(const qmckl_context context, const char* file_name, const int6
 qmckl_exit_code
 qmckl_trexio_read_device(const qmckl_context context, const char* file_name, const int64_t size_max, int device_id)
 {
+  printf("Debut read device\n");
   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+    printf("Pas de context");
     return false;
   }
 
   qmckl_exit_code rc;
+  rc  = QMCKL_SUCCESS;
   char file_name_new[size_max+1];
   strncpy(file_name_new, file_name, size_max+1);
   file_name_new[size_max] = '\0';
@@ -2092,6 +2072,7 @@ qmckl_trexio_read_device(const qmckl_context context, const char* file_name, con
   trexio_t* file = qmckl_trexio_open_X(file_name_new, &rc);
   if (file == NULL) {
     trexio_close(file);
+    printf("Pas de file\n");
     return qmckl_failwith( context,
                            QMCKL_INVALID_ARG_2,
                            "qmckl_trexio_read",
@@ -2103,6 +2084,7 @@ qmckl_trexio_read_device(const qmckl_context context, const char* file_name, con
   rc = qmckl_trexio_read_electron_X(context, file);
   if (rc != QMCKL_SUCCESS) {
     trexio_close(file);
+    printf("erreur electrons\n");
     return qmckl_failwith( context,
                            QMCKL_FAILURE,
                            "qmckl_trexio_read",
@@ -2112,6 +2094,7 @@ qmckl_trexio_read_device(const qmckl_context context, const char* file_name, con
   rc = qmckl_trexio_read_nucleus_X_device(context, file, device_id);
   if (rc != QMCKL_SUCCESS) {
     trexio_close(file);
+    printf("erreur nucleus\n");
     return qmckl_failwith( context,
                            QMCKL_FAILURE,
                            "qmckl_trexio_read",
@@ -2121,6 +2104,7 @@ qmckl_trexio_read_device(const qmckl_context context, const char* file_name, con
   rc = qmckl_trexio_read_ao_X_device(context, file, device_id);
   if (rc != QMCKL_SUCCESS) {
     trexio_close(file);
+    printf("erreur ao\n");
     return qmckl_failwith( context,
                            QMCKL_FAILURE,
                            "qmckl_trexio_read",
@@ -2129,6 +2113,7 @@ qmckl_trexio_read_device(const qmckl_context context, const char* file_name, con
 
   rc = qmckl_trexio_read_mo_X_device(context, file, device_id);
   if (rc != QMCKL_SUCCESS) {
+    printf("erreur la pour mo\n");
     trexio_close(file);
     return qmckl_failwith( context,
                            QMCKL_FAILURE,
@@ -2140,11 +2125,13 @@ qmckl_trexio_read_device(const qmckl_context context, const char* file_name, con
   file = NULL;
 #else
 
+  printf("Compil sans trexio\n");
   rc = qmckl_failwith( context,
                        QMCKL_FAILURE,
                        "qmckl_trexio_read",
                        "QMCkl was compiled without TREXIO");
 #endif
+  printf("Fin lect device\n");
   return rc;
 }
 #endif

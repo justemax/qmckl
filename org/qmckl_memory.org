@@ -469,6 +469,70 @@ qmckl_get_malloc_info(qmckl_context context,
 }
   #+end_src
 
+  **** Device pointers
+
+    #+begin_src c :tangle (eval h_private_func) :noexport
+qmckl_exit_code
+qmckl_get_malloc_info_device(qmckl_context context,
+                      const void* pointer,
+                      qmckl_memory_info_struct* info,
+                      const int64_t device_id);
+  #+end_src
+
+  # Source
+  #+begin_src c :tangle (eval c)
+qmckl_exit_code
+qmckl_get_malloc_info_device(qmckl_context context,
+                      const void* ptr,
+                      qmckl_memory_info_struct* info,
+                      const int64_t device_id)
+{
+
+  assert (qmckl_context_check(context) != QMCKL_NULL_CONTEXT);
+
+  qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+
+  if (ptr == NULL) {
+    return qmckl_failwith(context,
+                          QMCKL_INVALID_ARG_2,
+                          "qmckl_get_malloc_info",
+                          "Null pointer");
+  }
+
+  if (info == NULL) {
+    return qmckl_failwith(context,
+                          QMCKL_INVALID_ARG_3,
+                          "qmckl_get_malloc_info",
+                          "Null pointer");
+  }
+
+  qmckl_lock(context);
+  {
+    /* Find the pointer entry */
+    size_t pos = (size_t) 0;
+    while ( pos < ctx->memory.array_size && ctx->memory.element[pos].pointer != ptr) {
+      pos += (size_t) 1;
+    }
+
+    if (pos >= ctx->memory.array_size) {
+      /* Not found */
+      qmckl_unlock(context);
+      return qmckl_failwith(context,
+                            QMCKL_INVALID_ARG_2,
+                            "qmckl_get_malloc_info",
+                            "Pointer not found in context");
+    }
+
+    /* Copy info */
+    omp_target_memcpy(info, &(ctx->memory.element[pos]), sizeof(qmckl_memory_info_struct),
+                      0,0,
+                      omp_get_initial_device(), device_id);
+  }
+  qmckl_unlock(context);
+
+  return QMCKL_SUCCESS;
+}
+  #+end_src
 
    # Test                                                            :noexport:
    #+begin_src c :tangle (eval c_test)
