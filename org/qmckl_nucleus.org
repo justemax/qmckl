@@ -717,11 +717,14 @@ qmckl_set_nucleus_coord_device (qmckl_context context,
 
   ctx->nucleus.coord = qmckl_matrix_alloc_device(context, nucl_num, 3, device_id);
 
-  if (ctx->nucleus.coord.data == NULL) {
+  #pragma use_device_ptr(ctx->nucleus.coord.data)
+  {
+  if (ctx->nucleus.coord.data_device == NULL) {
     return qmckl_failwith( context,
                            QMCKL_ALLOCATION_FAILED,
                            "qmckl_set_nucleus_coord_device",
                            NULL);
+  }
   }
 
   if (size_max < 3*nucl_num) {
