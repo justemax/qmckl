@@ -4223,7 +4223,7 @@ qmckl_exit_code qmckl_compute_een_rescaled_e_device (
     }
 
     k = 0;
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for //collapse(2)
     for (int i = 0; i < elec_num; ++i) {
       for (int j = 0; j < i; ++j) {
         // een_rescaled_e_ij(k, 2) = dexp(-rescale_factor_kappa_ee * ee_distance(i, j, nw));
@@ -4233,7 +4233,7 @@ qmckl_exit_code qmckl_compute_een_rescaled_e_device (
       }
     }
 
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for //collapse(2)
     for (int l = 2; l < (cord_num+1); ++l) {
       for (int k = 0; k < elec_pairs; ++k) {
       // een_rescaled_e_ij(k, l + 1) = een_rescaled_e_ij(k, l + 1 - 1) * een_rescaled_e_ij(k, 2)
@@ -4242,7 +4242,7 @@ qmckl_exit_code qmckl_compute_een_rescaled_e_device (
       }
     }
 
-  #pragma omp parallel for collapse(2)
+  #pragma omp parallel for //collapse(2)
   // prepare the actual een table
   for (int i = 0; i < elec_num; ++i){
     for (int j = 0; j < elec_num; ++j) {
@@ -4251,7 +4251,7 @@ qmckl_exit_code qmckl_compute_een_rescaled_e_device (
   }
 
     // Up to here it should work.
-  #pragma omp parallel for collapse(3)
+  #pragma omp parallel for //collapse(3)
   for ( int l = 1; l < (cord_num+1); ++l) {
     //k = 0;
     for (int i = 0; i < elec_num; ++i) {
@@ -4264,7 +4264,7 @@ qmckl_exit_code qmckl_compute_een_rescaled_e_device (
     }
   }
 
-  #pragma omp parallel for collapse(2)
+  #pragma omp parallel for //collapse(2)
   for (int l = 0; l < (cord_num + 1); ++l) {
     for (int j = 0; j < elec_num; ++j) {
       een_rescaled_e[j + j*elec_num + l*elec_num*elec_num + nw*elec_num*elec_num*(cord_num+1)] = 0.0;
@@ -7561,7 +7561,7 @@ qmckl_exit_code qmckl_compute_lkpm_combined_index_device (
   #pragma omp target is_device_ptr(lkpm_combined_index)
   {
   kk = 0;
-  #pragma omp parallel for collapse(2)
+  #pragma omp parallel for //collapse(2)
   for (int p = 2; p <= cord_num; ++p) {
     for (int k=(p-1); k >= 0; --k) {
       if (k != 0) {
