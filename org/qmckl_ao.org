@@ -7598,6 +7598,152 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_value(qmckl_context context)
 #+end_src
 
 
+**** Device_pointers
+
+#+RESULTS:
+#+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :export none
+qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context);
+#+end_src
+
+#+CALL: write_provider_pre( group="ao_basis", data="ao_value", dimension="ctx->ao_basis.ao_num * ctx->point.num")
+
+#+RESULTS:
+#+begin_src c :comments org :tangle (eval c) :noweb yes :export none
+qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context)
+{
+
+  qmckl_exit_code rc = QMCKL_SUCCESS;
+
+  if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_CONTEXT,
+                           "qmckl_provide_ao_basis_ao_value",
+                           NULL);
+  }
+
+  qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  assert (ctx != NULL);
+
+  if (!ctx->ao_basis.provided) {
+    return qmckl_failwith( context,
+                           QMCKL_NOT_PROVIDED,
+                           "qmckl_provide_ao_basis_ao_value",
+                           NULL);
+  }
+
+  /* Compute if necessary */
+  if (ctx->point.date > ctx->ao_basis.ao_value_date) {
+
+    qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
+    mem_info.size = ctx->ao_basis.ao_num * ctx->point.num * sizeof(double);
+
+    if (ctx->ao_basis.ao_value != NULL) {
+      qmckl_memory_info_struct mem_info_test = qmckl_memory_info_struct_zero;
+      rc = qmckl_get_malloc_info(context, ctx->ao_basis.ao_value, &mem_info_test);
+
+      /* if rc != QMCKL_SUCCESS, we are maybe in an _inplace function because the
+         memory was not allocated with qmckl_malloc */
+
+      if ((rc == QMCKL_SUCCESS) && (mem_info_test.size != mem_info.size)) {
+        rc = qmckl_free(context, ctx->ao_basis.ao_value);
+        assert (rc == QMCKL_SUCCESS);
+        ctx->ao_basis.ao_value = NULL;
+      }
+    }
+
+    /* Allocate array */
+    if (ctx->ao_basis.ao_value == NULL) {
+
+      double* ao_value = (double*) qmckl_malloc(context, mem_info);
+
+      if (ao_value == NULL) {
+        return qmckl_failwith( context,
+                               QMCKL_ALLOCATION_FAILED,
+                               "qmckl_ao_basis_ao_value",
+                               NULL);
+      }
+      ctx->ao_basis.ao_value = ao_value;
+    }
+
+#+end_src
+
+     #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+    if (ctx->ao_basis.ao_vgl_date == ctx->point.date) {
+
+      // ao_vgl has been computed at this step: Just copy the data.
+
+      double * v = &(ctx->ao_basis.ao_value[0]);
+      double * vgl = &(ctx->ao_basis.ao_vgl[0]);
+      for (int i=0 ; i<ctx->point.num ; ++i) {
+        for (int k=0 ; k<ctx->ao_basis.ao_num ; ++k) {
+          v[k] = vgl[k];
+        }
+        v   += ctx->ao_basis.ao_num;
+        vgl += ctx->ao_basis.ao_num * 5;
+      }
+
+    } else {
+
+      if (ctx->ao_basis.type == 'G') {
+        rc = qmckl_compute_ao_vgl_gaussian_device_pointers(context,
+                                                 ctx->ao_basis.ao_num,
+                                                 ctx->ao_basis.shell_num,
+                                                 ctx->ao_basis.prim_num_per_nucleus,
+                                                 ctx->point.num,
+                                                 ctx->nucleus.num,
+                                                 ctx->point.coord.data,
+                                                 ctx->nucleus.coord.data,
+                                                 ctx->ao_basis.nucleus_index,
+                                                 ctx->ao_basis.nucleus_shell_num,
+                                                 ctx->ao_basis.nucleus_range,
+                                                 ctx->ao_basis.nucleus_max_ang_mom,
+                                                 ctx->ao_basis.shell_ang_mom,
+                                                 ctx->ao_basis.ao_factor,
+                                                 ctx->ao_basis.expo_per_nucleus,
+                                                 ctx->ao_basis.coef_per_nucleus,
+                                                 ctx->ao_basis.ao_value);
+            } else {
+        /* Provide required data */
+        rc = qmckl_provide_ao_basis_shell_vgl(context);
+        if (rc != QMCKL_SUCCESS) {
+            return qmckl_failwith( context, rc, "qmckl_provide_ao_basis_shell_vgl", NULL);
+        }
+
+        rc = qmckl_compute_ao_value_doc(context,
+                                        ctx->ao_basis.ao_num,
+                                        ctx->ao_basis.shell_num,
+                                        ctx->point.num,
+                                        ctx->nucleus.num,
+                                        ctx->point.coord.data,
+                                        ctx->nucleus.coord.data,
+                                        ctx->ao_basis.nucleus_index,
+                                        ctx->ao_basis.nucleus_shell_num,
+                                        ctx->ao_basis.nucleus_range,
+                                        ctx->ao_basis.nucleus_max_ang_mom,
+                                        ctx->ao_basis.shell_ang_mom,
+                                        ctx->ao_basis.ao_factor,
+                                        ctx->ao_basis.shell_vgl,
+                                        ctx->ao_basis.ao_value);
+      }
+    }
+     #+end_src
+
+#+CALL: write_provider_post( group="ao_basis", data="ao_value" )
+
+#+RESULTS:
+#+begin_src c :comments org :tangle (eval c) :noweb yes :export none
+    if (rc != QMCKL_SUCCESS) {
+      return rc;
+    }
+
+    ctx->ao_basis.ao_value_date = ctx->date;
+  }
+
+  return QMCKL_SUCCESS;
+}
+#+end_src
+
+
 
 
      #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :exports none
@@ -9827,6 +9973,113 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_vgl(qmckl_context context)
   return QMCKL_SUCCESS;
 }
 #+end_src
+
+**** DEVICE POITERS
+
+#+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :export none
+qmckl_exit_code qmckl_provide_ao_basis_ao_vgl_device(qmckl_context context, int64_t const device_id);
+#+end_src
+
+#+CALL: write_provider_pre( group="ao_basis", data="ao_vgl", dimension="ctx->ao_basis.ao_num * 5 * ctx->point.num")
+
+#+RESULTS:
+#+begin_src c :comments org :tangle (eval c) :noweb yes :export none
+qmckl_exit_code qmckl_provide_ao_basis_ao_vgl_device(qmckl_context context, int64_t const device_id)
+{
+
+  qmckl_exit_code rc = QMCKL_SUCCESS;
+
+  if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
+    return qmckl_failwith( context,
+                           QMCKL_INVALID_CONTEXT,
+                           "qmckl_provide_ao_basis_ao_vgl",
+                           NULL);
+  }
+
+  qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
+  assert (ctx != NULL);
+
+  if (!ctx->ao_basis.provided) {
+    return qmckl_failwith( context,
+                           QMCKL_NOT_PROVIDED,
+                           "qmckl_provide_ao_basis_ao_vgl",
+                           NULL);
+  }
+
+  /* Compute if necessary */
+  if (ctx->point.date > ctx->ao_basis.ao_vgl_date) {
+
+    qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
+    mem_info.size = ctx->ao_basis.ao_num * 5 * ctx->point.num * sizeof(double);
+
+    if (ctx->ao_basis.ao_vgl != NULL) {
+      qmckl_memory_info_struct mem_info_test = qmckl_memory_info_struct_zero;
+      rc = qmckl_get_malloc_info_device(context, ctx->ao_basis.ao_vgl, &mem_info_test, device_id);
+
+      /* if rc != QMCKL_SUCCESS, we are maybe in an _inplace function because the
+         memory was not allocated with qmckl_malloc */
+
+      if ((rc == QMCKL_SUCCESS) && (mem_info_test.size != mem_info.size)) {
+        rc = qmckl_free_device(context, ctx->ao_basis.ao_vgl, device_id);
+        assert (rc == QMCKL_SUCCESS);
+        ctx->ao_basis.ao_vgl = NULL;
+      }
+    }
+
+    /* Allocate array */
+    if (ctx->ao_basis.ao_vgl == NULL) {
+
+      double* ao_vgl = (double*) qmckl_malloc_device(context, mem_info, device_id);
+
+      if (ao_vgl == NULL) {
+        return qmckl_failwith( context,
+                               QMCKL_ALLOCATION_FAILED,
+                               "qmckl_ao_basis_ao_vgl",
+                               NULL);
+      }
+      ctx->ao_basis.ao_vgl = ao_vgl;
+    }
+
+#+end_src
+
+     #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+    if (ctx->ao_basis.type == 'G') {
+      rc = qmckl_compute_ao_vgl_gaussian_device_pointers(context,
+                                  ctx->ao_basis.ao_num,
+                                  ctx->ao_basis.shell_num,
+                                  ctx->ao_basis.prim_num_per_nucleus,
+                                  ctx->point.num,
+                                  ctx->nucleus.num,
+                                  ctx->point.coord.data,
+                                  ctx->nucleus.coord.data,
+                                  ctx->ao_basis.nucleus_index,
+                                  ctx->ao_basis.nucleus_shell_num,
+                                  ctx->ao_basis.nucleus_range,
+                                  ctx->ao_basis.nucleus_max_ang_mom,
+                                  ctx->ao_basis.shell_ang_mom,
+                                  ctx->ao_basis.ao_factor,
+                                  ctx->ao_basis.expo_per_nucleus,
+                                  ctx->ao_basis.coef_per_nucleus,
+                                  ctx->ao_basis.ao_vgl,
+                                  device_id);
+      }
+     #+end_src
+
+#+CALL: write_provider_post( group="ao_basis", data="ao_vgl" )
+
+#+RESULTS:
+#+begin_src c :comments org :tangle (eval c) :noweb yes :export none
+    if (rc != QMCKL_SUCCESS) {
+      return rc;
+    }
+
+    ctx->ao_basis.ao_vgl_date = ctx->date;
+  }
+
+  return QMCKL_SUCCESS;
+}
+#+end_src
+
 
 
 

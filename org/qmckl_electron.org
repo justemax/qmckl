@@ -713,6 +713,7 @@ qmckl_set_electron_coord_device(qmckl_context context,
   <<pre2>>
 
   if (transp != 'N' && transp != 'T') {
+    printf("ici 1\n");
     return qmckl_failwith( context,
                            QMCKL_INVALID_ARG_2,
                            "qmckl_set_electron_coord_device",
@@ -720,22 +721,30 @@ qmckl_set_electron_coord_device(qmckl_context context,
   }
 
   if (walk_num <= 0) {
+    printf("ici 2\n");
     return qmckl_failwith( context,
                            QMCKL_INVALID_ARG_3,
                            "qmckl_set_electron_coord_device",
                            "walk_num <= 0");
   }
 
+
+  #pragma use_device_ptr(coord)
+  {
+    printf("%p\n", coord);
   if (coord == NULL) {
+    printf("ici 3\n");
     return qmckl_failwith( context,
                            QMCKL_INVALID_ARG_3,
                            "qmckl_set_electron_coord_device",
                            "coord is a null pointer");
   }
+  }
 
   const int64_t elec_num = ctx->electron.num;
 
   if (elec_num == 0L) {
+    printf("ici 4\n");
     return qmckl_failwith( context,
                            QMCKL_FAILURE,
                            "qmckl_set_electron_coord_device",
@@ -755,6 +764,7 @@ qmckl_set_electron_coord_device(qmckl_context context,
 
   ctx->electron.walker.num = walk_num;
   memcpy(&(ctx->electron.walker.point), &(ctx->point), sizeof(qmckl_point_struct));
+  printf("fini sans soucis\n");
 
   return QMCKL_SUCCESS;
 
