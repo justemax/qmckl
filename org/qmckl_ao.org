@@ -7602,14 +7602,14 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_value(qmckl_context context)
 
 #+RESULTS:
 #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :export none
-qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context);
+qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context, int64_t device_id);
 #+end_src
 
 #+CALL: write_provider_pre( group="ao_basis", data="ao_value", dimension="ctx->ao_basis.ao_num * ctx->point.num")
 
 #+RESULTS:
 #+begin_src c :comments org :tangle (eval c) :noweb yes :export none
-qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context)
+qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context, int64_t device_id)
 {
 
   qmckl_exit_code rc = QMCKL_SUCCESS;
@@ -7637,32 +7637,33 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context)
     qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
     mem_info.size = ctx->ao_basis.ao_num * ctx->point.num * sizeof(double);
 
-    if (ctx->ao_basis.ao_value != NULL) {
+    if (ctx->ao_basis.ao_value_device != NULL) {
       qmckl_memory_info_struct mem_info_test = qmckl_memory_info_struct_zero;
-      rc = qmckl_get_malloc_info(context, ctx->ao_basis.ao_value, &mem_info_test);
+      rc = qmckl_get_malloc_info_device(context, ctx->ao_basis.ao_value, &mem_info_test, device_id);
 
       /* if rc != QMCKL_SUCCESS, we are maybe in an _inplace function because the
          memory was not allocated with qmckl_malloc */
 
       if ((rc == QMCKL_SUCCESS) && (mem_info_test.size != mem_info.size)) {
-        rc = qmckl_free(context, ctx->ao_basis.ao_value);
+        rc = qmckl_free_device(context, ctx->ao_basis.ao_value_device, device_id);
         assert (rc == QMCKL_SUCCESS);
-        ctx->ao_basis.ao_value = NULL;
+        ctx->ao_basis.ao_value_device = NULL;
       }
     }
 
     /* Allocate array */
-    if (ctx->ao_basis.ao_value == NULL) {
+    if (ctx->ao_basis.ao_value_device == NULL) {
 
-      double* ao_value = (double*) qmckl_malloc(context, mem_info);
+      printf("Go alloc du bordel\n");
+      double* ao_value_device = (double*) qmckl_malloc_device(context, mem_info, device_id);
 
-      if (ao_value == NULL) {
+      if (ao_value_device == NULL) {
         return qmckl_failwith( context,
                                QMCKL_ALLOCATION_FAILED,
                                "qmckl_ao_basis_ao_value",
                                NULL);
       }
-      ctx->ao_basis.ao_value = ao_value;
+      ctx->ao_basis.ao_value_device = ao_value_device;
     }
 
 #+end_src
@@ -7672,8 +7673,8 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context)
 
       // ao_vgl has been computed at this step: Just copy the data.
 
-      double * v = &(ctx->ao_basis.ao_value[0]);
-      double * vgl = &(ctx->ao_basis.ao_vgl[0]);
+      double * v = &(ctx->ao_basis.ao_value_device[0]);
+      double * vgl = &(ctx->ao_basis.ao_vgl_device[0]);
       for (int i=0 ; i<ctx->point.num ; ++i) {
         for (int k=0 ; k<ctx->ao_basis.ao_num ; ++k) {
           v[k] = vgl[k];
@@ -7685,23 +7686,24 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context)
     } else {
 
       if (ctx->ao_basis.type == 'G') {
-        rc = qmckl_compute_ao_vgl_gaussian_device_pointers(context,
-                                                 ctx->ao_basis.ao_num,
-                                                 ctx->ao_basis.shell_num,
-                                                 ctx->ao_basis.prim_num_per_nucleus,
-                                                 ctx->point.num,
-                                                 ctx->nucleus.num,
-                                                 ctx->point.coord.data,
-                                                 ctx->nucleus.coord.data,
-                                                 ctx->ao_basis.nucleus_index,
-                                                 ctx->ao_basis.nucleus_shell_num,
-                                                 ctx->ao_basis.nucleus_range,
-                                                 ctx->ao_basis.nucleus_max_ang_mom,
-                                                 ctx->ao_basis.shell_ang_mom,
-                                                 ctx->ao_basis.ao_factor,
-                                                 ctx->ao_basis.expo_per_nucleus,
-                                                 ctx->ao_basis.coef_per_nucleus,
-                                                 ctx->ao_basis.ao_value);
+         rc = qmckl_compute_ao_vgl_gaussian_device_pointers(context,
+                                                         ctx->ao_basis.ao_num,
+                                                         ctx->ao_basis.shell_num,
+                                                         ctx->ao_basis.prim_num_per_nucleus_device,
+                                                         ctx->point.num,
+                                                         ctx->nucleus.num,
+                                                         ctx->point.coord.data_device,
+                                                         ctx->nucleus.coord.data_device,
+                                                         ctx->ao_basis.nucleus_index_device,
+                                                         ctx->ao_basis.nucleus_shell_num_device,
+                                                         ctx->ao_basis.nucleus_range_device,
+                                                         ctx->ao_basis.nucleus_max_ang_mom_device,
+                                                         ctx->ao_basis.shell_ang_mom_device,
+                                                         ctx->ao_basis.ao_factor_device,
+                                                         ctx->ao_basis.expo_per_nucleus,
+                                                         ctx->ao_basis.coef_per_nucleus,
+                                                         ctx->ao_basis.ao_value_device,
+                                                         device_id);
             } else {
         /* Provide required data */
         rc = qmckl_provide_ao_basis_shell_vgl(context);
@@ -9227,6 +9229,11 @@ qmckl_compute_ao_vgl_gaussian_device_pointers (
                                            int device_id )
 {
 
+
+  #pragma use_device_ptr(ao_vgl)
+  {
+  printf("ao_vgl addr: %p \n", ao_vgl);
+  }
   double * expo_per_nucleus_data_device = expo_per_nucleus.data_device;
   double * coef_per_nucleus_data_device = coef_per_nucleus.data_device;
 
@@ -9266,23 +9273,23 @@ qmckl_compute_ao_vgl_gaussian_device_pointers (
   )
   {
 
-  size_max_ptr[0] = 0;
-  prim_max_ptr[0] = 0;
-  shell_max_ptr[0] = 0;
-  k_ptr[0] = 0;
+  ,*size_max_ptr = 0;
+  ,*prim_max_ptr = 0;
+  ,*shell_max_ptr = 0;
+  ,*k_ptr = 0;
 
   for (int inucl=0 ; inucl < nucl_num ; ++inucl) {
-    prim_max_ptr[0] = prim_num_per_nucleus[inucl] > prim_max_ptr[0] ?
-      prim_num_per_nucleus[inucl] : prim_max_ptr[0];
-    shell_max_ptr[0] = nucleus_shell_num[inucl] > shell_max_ptr[0] ?
-      nucleus_shell_num[inucl] : shell_max_ptr[0];
+    ,*prim_max_ptr = prim_num_per_nucleus[inucl] > *prim_max_ptr ?
+      prim_num_per_nucleus[inucl] : *prim_max_ptr;
+    ,*shell_max_ptr = nucleus_shell_num[inucl] > *shell_max_ptr ?
+      nucleus_shell_num[inucl] : *shell_max_ptr;
     int64_t ishell_start = nucleus_index[inucl];
     int64_t ishell_end   = nucleus_index[inucl] + nucleus_shell_num[inucl];
     for (int64_t ishell = ishell_start ; ishell < ishell_end ; ++ishell) {
       const int l = shell_ang_mom[ishell];
-      ao_index[ishell] = k_ptr[0];
-      k_ptr[0] += lstart_h[l+1] - lstart_h[l];
-      size_max_ptr[0] = size_max_ptr[0] < lstart_h[l+1] ? lstart_h[l+1] : size_max_ptr[0];
+      ao_index[ishell] = *k_ptr;
+      ,*k_ptr += lstart_h[l+1] - lstart_h[l];
+      ,*size_max_ptr = *size_max_ptr < lstart_h[l+1] ? lstart_h[l+1] : *size_max_ptr;
     }
   }
 
@@ -10037,7 +10044,10 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_vgl_device(qmckl_context context, int6
                                "qmckl_ao_basis_ao_vgl",
                                NULL);
       }
-      ctx->ao_basis.ao_vgl = ao_vgl;
+      #pragma use_device_ptr(ao_vgl)
+      {
+      ctx->ao_basis.ao_vgl_device = ao_vgl;
+      }
     }
 
 #+end_src
@@ -10045,24 +10055,25 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_vgl_device(qmckl_context context, int6
      #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
     if (ctx->ao_basis.type == 'G') {
       rc = qmckl_compute_ao_vgl_gaussian_device_pointers(context,
-                                  ctx->ao_basis.ao_num,
-                                  ctx->ao_basis.shell_num,
-                                  ctx->ao_basis.prim_num_per_nucleus,
-                                  ctx->point.num,
-                                  ctx->nucleus.num,
-                                  ctx->point.coord.data,
-                                  ctx->nucleus.coord.data,
-                                  ctx->ao_basis.nucleus_index,
-                                  ctx->ao_basis.nucleus_shell_num,
-                                  ctx->ao_basis.nucleus_range,
-                                  ctx->ao_basis.nucleus_max_ang_mom,
-                                  ctx->ao_basis.shell_ang_mom,
-                                  ctx->ao_basis.ao_factor,
-                                  ctx->ao_basis.expo_per_nucleus,
-                                  ctx->ao_basis.coef_per_nucleus,
-                                  ctx->ao_basis.ao_vgl,
-                                  device_id);
-      }
+                                                         ctx->ao_basis.ao_num,
+                                                         ctx->ao_basis.shell_num,
+                                                         ctx->ao_basis.prim_num_per_nucleus_device,
+                                                         ctx->point.num,
+                                                         ctx->nucleus.num,
+                                                         ctx->point.coord.data_device,
+                                                         ctx->nucleus.coord.data_device,
+                                                         ctx->ao_basis.nucleus_index_device,
+                                                         ctx->ao_basis.nucleus_shell_num_device,
+                                                         ctx->ao_basis.nucleus_range_device,
+                                                         ctx->ao_basis.nucleus_max_ang_mom_device,
+                                                         ctx->ao_basis.shell_ang_mom_device,
+                                                         ctx->ao_basis.ao_factor_device,
+                                                         ctx->ao_basis.expo_per_nucleus,
+                                                         ctx->ao_basis.coef_per_nucleus,
+                                                         ctx->ao_basis.ao_vgl_device,
+                                                         device_id);
+
+         }
      #+end_src
 
 #+CALL: write_provider_post( group="ao_basis", data="ao_vgl" )

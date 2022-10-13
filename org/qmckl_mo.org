@@ -1141,7 +1141,8 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_value_device(qmckl_context context, in
 
     } else {
 
-      rc = qmckl_provide_ao_basis_ao_value(context);
+      printf("ok avant ce call\n");
+      rc = qmckl_provide_ao_basis_ao_value_device(context, device_id);
 
       if (rc != QMCKL_SUCCESS) {
         return qmckl_failwith( context,
@@ -1898,30 +1899,33 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_vgl_device(qmckl_context context, int6
 
     if (ctx->mo_basis.mo_vgl != NULL) {
       qmckl_memory_info_struct mem_info_test = qmckl_memory_info_struct_zero;
-      rc = qmckl_get_malloc_info_device(context, ctx->mo_basis.mo_vgl, &mem_info_test, device_id);
+      rc = qmckl_get_malloc_info_device(context, ctx->mo_basis.mo_vgl_device, &mem_info_test, device_id);
 
       /* if rc != QMCKL_SUCCESS, we are maybe in an _inplace function because the
          memory was not allocated with qmckl_malloc */
 
       if ((rc == QMCKL_SUCCESS) && (mem_info_test.size != mem_info.size)) {
-        rc = qmckl_free_device(context, ctx->mo_basis.mo_vgl, device_id);
+        rc = qmckl_free_device(context, ctx->mo_basis.mo_vgl_device, device_id);
         assert (rc == QMCKL_SUCCESS);
-        ctx->mo_basis.mo_vgl = NULL;
+        ctx->mo_basis.mo_vgl_device = NULL;
       }
     }
 
     /* Allocate array */
-    if (ctx->mo_basis.mo_vgl == NULL) {
+    if (ctx->mo_basis.mo_vgl_device == NULL) {
 
-      double* mo_vgl = (double*) qmckl_malloc_device(context, mem_info, device_id);
+      double* mo_vgl_device = (double*) qmckl_malloc_device(context, mem_info, device_id);
 
-      if (mo_vgl == NULL) {
+      if (mo_vgl_device == NULL) {
         return qmckl_failwith( context,
                                QMCKL_ALLOCATION_FAILED,
                                "qmckl_mo_basis_mo_vgl",
                                NULL);
       }
-      ctx->mo_basis.mo_vgl = mo_vgl;
+      #pragma target data is_device_ptr(mo_vgl_device)
+      {
+      ctx->mo_basis.mo_vgl_device = mo_vgl_device;
+      }
     }
 
 #+end_src
@@ -1941,8 +1945,8 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_vgl_device(qmckl_context context, int6
                                        ctx->mo_basis.mo_num,
                                        ctx->point.num,
                                        ctx->mo_basis.coefficient_t,
-                                       ctx->ao_basis.ao_vgl,
-                                       ctx->mo_basis.mo_vgl,
+                                       ctx->ao_basis.ao_vgl_device,
+                                       ctx->mo_basis.mo_vgl_device,
                                        device_id);
     #+end_src
 
@@ -2251,51 +2255,54 @@ qmckl_compute_mo_basis_mo_vgl_hpc (const qmckl_context context,
 
 
     #+begin_src c :tangle (eval h_func) :comments org
-#ifdef HAVE_HPC
+#ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code
 qmckl_compute_mo_basis_mo_vgl_device (const qmckl_context context,
                                    const int64_t ao_num,
                                    const int64_t mo_num,
                                    const int64_t point_num,
                                    const double* coefficient_t,
-                                   const double* ao_vgl,
-                                   double* const mo_vgl,
+                                   double* ao_vgl,
+                                   double* mo_vgl,
                                    const int64_t device_id);
 
 #endif
     #+end_src
 
     #+begin_src c :tangle (eval c) :comments org
-#ifdef HAVE_HPC
+#ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code
 qmckl_compute_mo_basis_mo_vgl_device (const qmckl_context context,
                                    const int64_t ao_num,
                                    const int64_t mo_num,
                                    const int64_t point_num,
                                    const double* restrict coefficient_t,
-                                   const double* restrict ao_vgl,
-                                   double* restrict const mo_vgl,
+                                   double* restrict ao_vgl,
+                                   double* restrict mo_vgl,
                                    const int64_t device_id)
 {
   assert (context != QMCKL_NULL_CONTEXT);
 
-#ifdef HAVE_OPENMP
-  #pragma omp parallel for
-#endif
-  for (int64_t ipoint=0 ; ipoint < point_num ; ++ipoint) {
-    double* restrict const vgl1 = &(mo_vgl[ipoint*5*mo_num]);
-    double* restrict const vgl2 =  vgl1 + mo_num;
-    double* restrict const vgl3 =  vgl1 + (mo_num << 1);
-    double* restrict const vgl4 =  vgl1 + (mo_num << 1) + mo_num;
-    double* restrict const vgl5 =  vgl1 + (mo_num << 2);
+  #pragma target data is_device_ptr(ao_vgl, mo_vgl)
+  {
+  //#pragma omp parallel for
+  for (int64_t ipoint=3 ; ipoint < point_num ; ++ipoint) {
+    double*   vgl1 = &(mo_vgl[ipoint*5*mo_num]);
+    //printf("adr vgl1 = %p val = %lld\n", vgl1, mo_vgl[0]);
+    //printf("adr vgl1[0] = %p \n", *vgl1);
+    double*   vgl2 =  vgl1 + mo_num;
+    double*   vgl3 =  vgl1 + (mo_num << 1);
+    double*   vgl4 =  vgl1 + (mo_num << 1) + mo_num;
+    double*   vgl5 =  vgl1 + (mo_num << 2);
 
-    const double* restrict avgl1 = &(ao_vgl[ipoint*5*ao_num]);
-    const double* restrict avgl2 = avgl1 + ao_num;
-    const double* restrict avgl3 = avgl1 + (ao_num << 1);
-    const double* restrict avgl4 = avgl1 + (ao_num << 1) + ao_num;
-    const double* restrict avgl5 = avgl1 + (ao_num << 2);
+     double*  avgl1 = &(ao_vgl[ipoint*5*ao_num]);
+     double*  avgl2 = avgl1 + ao_num;
+     double*  avgl3 = avgl1 + (ao_num << 1);
+     double*  avgl4 = avgl1 + (ao_num << 1) + ao_num;
+     double*  avgl5 = avgl1 + (ao_num << 2);
 
     for (int64_t i=0 ; i<mo_num ; ++i) {
+      //printf("i val = %d \n",i);
       vgl1[i] = 0.;
       vgl2[i] = 0.;
       vgl3[i] = 0.;
@@ -2355,9 +2362,7 @@ qmckl_compute_mo_basis_mo_vgl_device (const qmckl_context context,
       const double a35 = av5[n+2];
       const double a45 = av5[n+3];
 
-#ifdef HAVE_OPENMP
 #pragma omp simd
-#endif
       for (int64_t i=0 ; i<mo_num ; ++i) {
         vgl1[i] = vgl1[i] + ck1[i] * a11 + ck2[i] * a21 + ck3[i] * a31 + ck4[i] * a41;
         vgl2[i] = vgl2[i] + ck1[i] * a12 + ck2[i] * a22 + ck3[i] * a32 + ck4[i] * a42;
@@ -2375,9 +2380,7 @@ qmckl_compute_mo_basis_mo_vgl_device (const qmckl_context context,
       const double a4 = av4[m];
       const double a5 = av5[m];
 
-#ifdef HAVE_OPENMP
   #pragma omp simd
-#endif
       for (int64_t i=0 ; i<mo_num ; ++i) {
         vgl1[i] += ck[i] * a1;
         vgl2[i] += ck[i] * a2;
@@ -2386,6 +2389,7 @@ qmckl_compute_mo_basis_mo_vgl_device (const qmckl_context context,
         vgl5[i] += ck[i] * a5;
       }
     }
+  }
   }
   return QMCKL_SUCCESS;
 }
