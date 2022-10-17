@@ -4172,7 +4172,7 @@ qmckl_exit_code qmckl_compute_een_rescaled_e_device (
   int device_id );
 #+end_src
 
-    ,#+begin_src c :comments org :tangle (eval c) :noweb yes
+    #+begin_src c :comments org :tangle (eval c) :noweb yes
 qmckl_exit_code qmckl_compute_een_rescaled_e_device (
   const qmckl_context context,
   const int64_t walk_num,
@@ -5464,7 +5464,7 @@ qmckl_exit_code qmckl_compute_een_rescaled_n_device (
 #+end_src
 
 
-    ,#+begin_src c :comments org :tangle (eval c) :noweb yes
+    #+begin_src c :comments org :tangle (eval c) :noweb yes
 qmckl_exit_code qmckl_compute_een_rescaled_n_device (
       const qmckl_context context,
       const int64_t walk_num,
