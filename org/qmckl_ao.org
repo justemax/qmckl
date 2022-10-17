@@ -9232,7 +9232,7 @@ qmckl_compute_ao_vgl_gaussian_device_pointers (
 
 
 
-,#+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+#+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
 #ifdef HAVE_DEVICE_POINTERS
 
 qmckl_exit_code
@@ -9254,7 +9254,6 @@ qmckl_compute_ao_vgl_gaussian_device_pointers (
                                            const qmckl_matrix expo_per_nucleus,
                                            const qmckl_tensor coef_per_nucleus,
                                            double* restrict const ao_vgl,
-
                                            int device_id )
 {
 
