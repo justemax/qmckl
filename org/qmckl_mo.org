@@ -2754,26 +2754,6 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
 
   double * expo_per_nucleus_data = expo_per_nucleus.data_device;
   int expo_per_nucleus_size_0 = expo_per_nucleus.size[0];
-
-<<<<<<< HEAD
-#pragma omp target                                      \
-  is_device_ptr(                                        \
-                coef_mat,                               \
-                ao_index,                               \
-                poly_vgl_shared,                        \
-                expo_per_nucleus_data,                  \
-                prim_num_per_nucleus,                   \
-                coord,                                  \
-                nucl_coord,                             \
-                nucleus_index,                          \
-                nucleus_shell_num,                      \
-                nucleus_range,                          \
-                nucleus_max_ang_mom,                    \
-                shell_ang_mom,                          \
-                ao_factor,                              \
-                ao_vgl                                  \
-                                                    )
-=======
 #pragma omp target                              \
   is_device_ptr(                                \
                 coef_mat,                       \
@@ -2791,7 +2771,6 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
                 ao_factor,                      \
                 ao_vgl                          \
                 )
->>>>>>> 977f971b5e6723409bddd12cfd49f51fa77aec24
   {
 
 #pragma omp teams distribute parallel for simd
