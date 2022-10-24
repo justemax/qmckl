@@ -1727,7 +1727,7 @@ qmckl_get_mo_basis_mo_vgl_inplace_device (qmckl_context context,
     #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
 qmckl_exit_code
 qmckl_get_mo_basis_mo_vgl_inplace_device (qmckl_context context,
-                                   double* const mo_vgl,
+                                   double* const mo_vgl_device,
                                    const int64_t size_max,
                                    const int64_t device_id)
 {
@@ -1755,10 +1755,11 @@ qmckl_get_mo_basis_mo_vgl_inplace_device (qmckl_context context,
   rc = qmckl_context_touch(context);
   if (rc != QMCKL_SUCCESS) return rc;
 
-  double* old_array = ctx->mo_basis.mo_vgl;
+  double* old_array = ctx->mo_basis.mo_vgl_device;
 
-  ctx->mo_basis.mo_vgl = mo_vgl;
+  ctx->mo_basis.mo_vgl_device = mo_vgl_device;
 
+  printf("before call\n");
   rc = qmckl_provide_mo_basis_mo_vgl_device(context, device_id);
   if (rc != QMCKL_SUCCESS) return rc;
 
@@ -3149,13 +3150,11 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
     //Set Mo to 0
 #pragma omp target
     {
-      double c1,c2,c3,c4,c5;
-      printf("%ld\n", mo_vgl[404*5*point_num + 121]);
-      printf("%ld\n", coefficient_t[129 * mo_num + 121]);
       //mo[point][5][mo_num]
       //ao[point][5][ao_num]
       //coef[ao][mo]
       //printf("%d", mo[404*5*point_num+])
+      #pragma omp teams distribute parallel for
       for(int j=0; j < point_num; j++ ){
         for(int i = 0; i < mo_num; i++){
           mo_vgl[j * 5 * mo_num + 0 * mo_num + i] = 0;
@@ -3165,14 +3164,15 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
           mo_vgl[j * 5 * mo_num + 4 * mo_num + i] = 0;
         }
 
+        double c1,c2,c3,c4,c5;
         for(int k = 1; k < ao_num; k++){
           if(ao_vgl[j * 5 * ao_num + 0 * ao_num + k] != 0)
             {
-              c1 = ao_vgl[j * 5 * point_num + 0 * point_num + k];
-              c2 = ao_vgl[j * 5 * point_num + 1 * point_num + k];
-              c3 = ao_vgl[j * 5 * point_num + 2 * point_num + k];
-              c4 = ao_vgl[j * 5 * point_num + 3 * point_num + k];
-              c5 = ao_vgl[j * 5 * point_num + 4 * point_num + k];
+              c1 = ao_vgl[j * 5 * ao_num + 0 * ao_num + k];
+              c2 = ao_vgl[j * 5 * ao_num + 1 * ao_num + k];
+              c3 = ao_vgl[j * 5 * ao_num + 2 * ao_num + k];
+              c4 = ao_vgl[j * 5 * ao_num + 3 * ao_num + k];
+              c5 = ao_vgl[j * 5 * ao_num + 4 * ao_num + k];
               for(int i=0; i < mo_num; i++){
                 mo_vgl[j * 5 * mo_num + 0 * mo_num + i] = mo_vgl[j * 5 * mo_num + 0 * mo_num + i] + coefficient_t[k * mo_num + i] + c1;
 
@@ -3193,7 +3193,6 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
       // calcul sur AO
 
     }
-    printf("fini la merde hihi\n");
 
     return QMCKL_SUCCESS;
 
