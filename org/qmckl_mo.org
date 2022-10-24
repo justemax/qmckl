@@ -3144,7 +3144,6 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
   // GO FOR MO
 
 
-<<<<<<< HEAD
 #pragma use_device_ptr(ao_vgl, mo_vgl, coefficient_t)
   {
     //Set Mo to 0
