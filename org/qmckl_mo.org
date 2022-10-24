@@ -2755,6 +2755,7 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
   double * expo_per_nucleus_data = expo_per_nucleus.data_device;
   int expo_per_nucleus_size_0 = expo_per_nucleus.size[0];
 
+<<<<<<< HEAD
 #pragma omp target                                      \
   is_device_ptr(                                        \
                 coef_mat,                               \
@@ -2772,6 +2773,25 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
                 ao_factor,                              \
                 ao_vgl                                  \
                                                     )
+=======
+#pragma omp target                              \
+  is_device_ptr(                                \
+                coef_mat,                       \
+                ao_index,                       \
+                poly_vgl_shared,                \
+                expo_per_nucleus_data,          \
+                prim_num_per_nucleus,           \
+                coord,                          \
+                nucl_coord,                     \
+                nucleus_index,                  \
+                nucleus_shell_num,              \
+                nucleus_range,                  \
+                nucleus_max_ang_mom,            \
+                shell_ang_mom,                  \
+                ao_factor,                      \
+                ao_vgl                          \
+                )
+>>>>>>> 977f971b5e6723409bddd12cfd49f51fa77aec24
   {
 
 #pragma omp teams distribute parallel for simd
@@ -2818,6 +2838,17 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
 
         const int32_t size_max = (nucleus_max_ang_mom[inucl]+1)*(nucleus_max_ang_mom[inucl]+2)*(nucleus_max_ang_mom[inucl]+3)/6;
         int32_t m;
+
+          double* restrict const vgl1 = poly_vgl;
+          double* restrict const vgl2 = poly_vgl + size_max;
+          double* restrict const vgl3 = poly_vgl + (size_max<<1);
+          double* restrict const vgl4 = poly_vgl + size_max + (size_max<<1);
+          double* restrict const vgl5 = poly_vgl + (size_max<<2);
+
+          const double Y[3] = { e_coord[0]-n_coord[0],
+            e_coord[1]-n_coord[1],
+            e_coord[2]-n_coord[2] };
+
 
 
         switch (nucleus_max_ang_mom[inucl]) {
@@ -3134,6 +3165,7 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
   // GO FOR MO
 
 
+<<<<<<< HEAD
 #pragma use_device_ptr(ao_vgl, mo_vgl, coefficient_t)
   {
     //Set Mo to 0
