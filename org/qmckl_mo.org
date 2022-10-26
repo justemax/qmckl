@@ -1948,7 +1948,7 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_vgl_device(qmckl_context context, int6
 
 
     #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
-/*
+
     rc = qmckl_provide_ao_basis_ao_vgl_device(context, device_id);
     if (rc != QMCKL_SUCCESS) {
       return qmckl_failwith( context,
@@ -1961,12 +1961,13 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_vgl_device(qmckl_context context, int6
                                        ctx->ao_basis.ao_num,
                                        ctx->mo_basis.mo_num,
                                        ctx->point.num,
-                                       ctx->mo_basis.coefficient_t,
+                                       ctx->mo_basis.coefficient_t_device,
                                        ctx->ao_basis.ao_vgl_device,
                                        ctx->mo_basis.mo_vgl_device,
                                        device_id);
-                                       ,*/
+
     /* Allocate array */
+/*
     if (ctx->ao_basis.ao_vgl == NULL) {
 
       double* ao_vgl = (double*) qmckl_malloc_device(context, mem_info, device_id);
@@ -2005,7 +2006,7 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_vgl_device(qmckl_context context, int6
                                        ctx->mo_basis.coefficient_t_device,
                                        ctx->ao_basis.ao_vgl_device,
                                        ctx->mo_basis.mo_vgl_device,
-                                       device_id);
+                                       device_id); */
 
 
     #+end_src
@@ -2457,114 +2458,52 @@ qmckl_compute_mo_basis_mo_vgl_device (const qmckl_context context,
 {
   assert (context != QMCKL_NULL_CONTEXT);
 
-  #pragma target data is_device_ptr(ao_vgl, mo_vgl)
+#pragma use_device_ptr(ao_vgl, mo_vgl, coefficient_t)
   {
-  //#pragma omp parallel for
-  for (int64_t ipoint=3 ; ipoint < point_num ; ++ipoint) {
-    double*   vgl1 = &(mo_vgl[ipoint*5*mo_num]);
-    //printf("adr vgl1 = %p val = %lld\n", vgl1, mo_vgl[0]);
-    //printf("adr vgl1[0] = %p \n", *vgl1);
-    double*   vgl2 =  vgl1 + mo_num;
-    double*   vgl3 =  vgl1 + (mo_num << 1);
-    double*   vgl4 =  vgl1 + (mo_num << 1) + mo_num;
-    double*   vgl5 =  vgl1 + (mo_num << 2);
+    //Set Mo to 0
+#pragma omp target
+    {
+      #pragma omp teams distribute parallel for
+      for(int j=0; j < point_num; j++ ){
+        for(int i = 0; i < mo_num; i++){
+          mo_vgl[j * 5 * mo_num + 0 * mo_num + i] = 0;
+          mo_vgl[j * 5 * mo_num + 1 * mo_num + i] = 0;
+          mo_vgl[j * 5 * mo_num + 2 * mo_num + i] = 0;
+          mo_vgl[j * 5 * mo_num + 3 * mo_num + i] = 0;
+          mo_vgl[j * 5 * mo_num + 4 * mo_num + i] = 0;
+        }
 
-     double*  avgl1 = &(ao_vgl[ipoint*5*ao_num]);
-     double*  avgl2 = avgl1 + ao_num;
-     double*  avgl3 = avgl1 + (ao_num << 1);
-     double*  avgl4 = avgl1 + (ao_num << 1) + ao_num;
-     double*  avgl5 = avgl1 + (ao_num << 2);
+        double c1,c2,c3,c4,c5;
+        for(int k = 1; k < ao_num; k++){
+          if(ao_vgl[j * 5 * ao_num + 0 * ao_num + k] != 0)
+            {
+              c1 = ao_vgl[j * 5 * ao_num + 0 * ao_num + k];
+              c2 = ao_vgl[j * 5 * ao_num + 1 * ao_num + k];
+              c3 = ao_vgl[j * 5 * ao_num + 2 * ao_num + k];
+              c4 = ao_vgl[j * 5 * ao_num + 3 * ao_num + k];
+              c5 = ao_vgl[j * 5 * ao_num + 4 * ao_num + k];
+              for(int i=0; i < mo_num; i++){
+                mo_vgl[j * 5 * mo_num + 0 * mo_num + i] = mo_vgl[j * 5 * mo_num + 0 * mo_num + i] + coefficient_t[k * mo_num + i] + c1;
 
-    for (int64_t i=0 ; i<mo_num ; ++i) {
-      //printf("i val = %d \n",i);
-      vgl1[i] = 0.;
-      vgl2[i] = 0.;
-      vgl3[i] = 0.;
-      vgl4[i] = 0.;
-      vgl5[i] = 0.;
-    }
+                mo_vgl[j * 5 * mo_num + 1 * mo_num + i] = mo_vgl[j * 5 * mo_num + 1 * mo_num + i] + coefficient_t[k * mo_num + i] + c2;
+                mo_vgl[j * 5 * mo_num + 2 * mo_num + i] = mo_vgl[j * 5 * mo_num + 2 * mo_num + i] + coefficient_t[k * mo_num + i] + c3;
+                mo_vgl[j * 5 * mo_num + 3 * mo_num + i] = mo_vgl[j * 5 * mo_num + 3 * mo_num + i] + coefficient_t[k * mo_num + i] + c4;
+                mo_vgl[j * 5 * mo_num + 4 * mo_num + i] = mo_vgl[j * 5 * mo_num + 4 * mo_num + i] + coefficient_t[k * mo_num + i] + c5;
 
-    int64_t nidx=0;
-    int64_t idx[ao_num];
-    double  av1[ao_num];
-    double  av2[ao_num];
-    double  av3[ao_num];
-    double  av4[ao_num];
-    double  av5[ao_num];
-    for (int64_t k=0 ; k<ao_num ; ++k) {
-      if (avgl1[k] != 0.) {
-        idx[nidx] = k;
-        av1[nidx] = avgl1[k];
-        av2[nidx] = avgl2[k];
-        av3[nidx] = avgl3[k];
-        av4[nidx] = avgl4[k];
-        av5[nidx] = avgl5[k];
-        ++nidx;
+
+              }
+            }
+        }
+
+
       }
-    }
-
-    int64_t n=0;
-
-    for (n=0 ; n < nidx-4 ; n+=4) {
-      const double* restrict ck1 = coefficient_t + idx[n  ]*mo_num;
-      const double* restrict ck2 = coefficient_t + idx[n+1]*mo_num;
-      const double* restrict ck3 = coefficient_t + idx[n+2]*mo_num;
-      const double* restrict ck4 = coefficient_t + idx[n+3]*mo_num;
-
-      const double a11 = av1[n  ];
-      const double a21 = av1[n+1];
-      const double a31 = av1[n+2];
-      const double a41 = av1[n+3];
-
-      const double a12 = av2[n  ];
-      const double a22 = av2[n+1];
-      const double a32 = av2[n+2];
-      const double a42 = av2[n+3];
-
-      const double a13 = av3[n  ];
-      const double a23 = av3[n+1];
-      const double a33 = av3[n+2];
-      const double a43 = av3[n+3];
-
-      const double a14 = av4[n  ];
-      const double a24 = av4[n+1];
-      const double a34 = av4[n+2];
-      const double a44 = av4[n+3];
-
-      const double a15 = av5[n  ];
-      const double a25 = av5[n+1];
-      const double a35 = av5[n+2];
-      const double a45 = av5[n+3];
-
-#pragma omp simd
-      for (int64_t i=0 ; i<mo_num ; ++i) {
-        vgl1[i] = vgl1[i] + ck1[i] * a11 + ck2[i] * a21 + ck3[i] * a31 + ck4[i] * a41;
-        vgl2[i] = vgl2[i] + ck1[i] * a12 + ck2[i] * a22 + ck3[i] * a32 + ck4[i] * a42;
-        vgl3[i] = vgl3[i] + ck1[i] * a13 + ck2[i] * a23 + ck3[i] * a33 + ck4[i] * a43;
-        vgl4[i] = vgl4[i] + ck1[i] * a14 + ck2[i] * a24 + ck3[i] * a34 + ck4[i] * a44;
-        vgl5[i] = vgl5[i] + ck1[i] * a15 + ck2[i] * a25 + ck3[i] * a35 + ck4[i] * a45;
       }
+
+      // calcul sur AO
+
     }
 
-    for (int64_t m=n ; m < nidx ; m+=1) {
-      const double* restrict ck = coefficient_t + idx[m]*mo_num;
-      const double a1 = av1[m];
-      const double a2 = av2[m];
-      const double a3 = av3[m];
-      const double a4 = av4[m];
-      const double a5 = av5[m];
 
-  #pragma omp simd
-      for (int64_t i=0 ; i<mo_num ; ++i) {
-        vgl1[i] += ck[i] * a1;
-        vgl2[i] += ck[i] * a2;
-        vgl3[i] += ck[i] * a3;
-        vgl4[i] += ck[i] * a4;
-        vgl5[i] += ck[i] * a5;
-      }
-    }
-  }
-  }
   return QMCKL_SUCCESS;
 }
 #endif
@@ -2630,10 +2569,6 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
 
 
 
-#pragma use_device_ptr(ao_vgl)
-  {
-    printf("ao_vgl addr: %p \n", ao_vgl);
-  }
   double * expo_per_nucleus_data_device = expo_per_nucleus.data_device;
   double * coef_per_nucleus_data_device = coef_per_nucleus.data_device;
 
@@ -3135,12 +3070,12 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
 
   }
   // End of target region
-  /*
+
     omp_target_free(ao_index, device_id);
     omp_target_free(coef_mat, device_id);
     omp_target_free(poly_vgl_shared, device_id);
     omp_target_free(lstart_h, device_id);
-  ,*/
+
   //END OF AO
   // GO FOR MO
 
