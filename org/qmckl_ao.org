@@ -9264,10 +9264,7 @@ qmckl_compute_ao_vgl_gaussian_device_pointers (
 {
 
 
-  #pragma use_device_ptr(ao_vgl)
-  {
-  printf("ao_vgl addr: %p \n", ao_vgl);
-  }
+
   double * expo_per_nucleus_data_device = expo_per_nucleus.data_device;
   double * coef_per_nucleus_data_device = coef_per_nucleus.data_device;
 
