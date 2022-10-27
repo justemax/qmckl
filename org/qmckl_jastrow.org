@@ -4159,19 +4159,6 @@ qmckl_exit_code qmckl_compute_een_rescaled_e_hpc (
 
 **** Device pointers
 
-
-    #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes
-qmckl_exit_code qmckl_compute_een_rescaled_e_device (
-  const qmckl_context context,
-  const int64_t walk_num,
-  const int64_t elec_num,
-  const int64_t cord_num,
-  const double rescale_factor_kappa_ee,
-  const double* ee_distance,
-  double* const een_rescaled_e,
-  int device_id );
-#+end_src
-
     #+begin_src c :comments org :tangle (eval c) :noweb yes
 qmckl_exit_code qmckl_compute_een_rescaled_e_device (
   const qmckl_context context,
@@ -5449,20 +5436,6 @@ qmckl_exit_code qmckl_compute_een_rescaled_n (
 
 
 **** Device pointers
-
-    #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes
-qmckl_exit_code qmckl_compute_een_rescaled_n_device (
-      const qmckl_context context,
-      const int64_t walk_num,
-      const int64_t elec_num,
-      const int64_t nucl_num,
-      const int64_t cord_num,
-      const double rescale_factor_kappa_en,
-      const double* en_distance,
-      double* const een_rescaled_n,
-      int device_id );
-#+end_src
-
 
     #+begin_src c :comments org :tangle (eval c) :noweb yes
 qmckl_exit_code qmckl_compute_een_rescaled_n_device (
@@ -8838,23 +8811,6 @@ qmckl_compute_dtmp_c_cublas_offload (
 #endif
      #+end_src
 
-
-          #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes
-#ifdef HAVE_DEVICE_POINTERS
-qmckl_exit_code qmckl_compute_dtmp_c_device (
-      const qmckl_context context,
-      const int64_t cord_num,
-      const int64_t elec_num,
-      const int64_t nucl_num,
-      const int64_t walk_num,
-      const double* een_rescaled_e_deriv_e,
-      const double* een_rescaled_n,
-      double* const dtmp_c,
-      const int64_t device_id);
-
-#endif
-#+end_src
-
      #+begin_src c :comments org :tangle (eval c) :noweb yes
 #ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_compute_dtmp_c_device (
@@ -8865,8 +8821,7 @@ qmckl_exit_code qmckl_compute_dtmp_c_device (
       const int64_t walk_num,
       const double* een_rescaled_e_deriv_e,
       const double* een_rescaled_n,
-      double* const dtmp_c,
-      const int64_t device_id) {
+      double* const dtmp_c ) {
 
   if (context == QMCKL_NULL_CONTEXT) {
      return QMCKL_INVALID_CONTEXT;
