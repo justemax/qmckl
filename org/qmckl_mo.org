@@ -1940,7 +1940,6 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_vgl_device(qmckl_context context, int6
       #pragma target is_device_ptr(mo_vgl_device)
       {
       ctx->mo_basis.mo_vgl_device = mo_vgl_device;
-      printf("mo_VGL adr depuis context: %p\n", ctx->mo_basis.mo_vgl_device);
       }
     }
 
@@ -1967,48 +1966,6 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_vgl_device(qmckl_context context, int6
                                        device_id);
 
     /* Allocate array */
-/*
-    if (ctx->ao_basis.ao_vgl == NULL) {
-
-      double* ao_vgl = (double*) qmckl_malloc_device(context, mem_info, device_id);
-
-      if (ao_vgl == NULL) {
-        return qmckl_failwith( context,
-                               QMCKL_ALLOCATION_FAILED,
-                               "qmckl_ao_basis_ao_vgl",
-                               NULL);
-      }
-      #pragma use_device_ptr(ao_vgl)
-      {
-      ctx->ao_basis.ao_vgl_device = ao_vgl;
-      }
-    }
-
-
-
-    rc = qmckl_compute_ao_mo_basis_ao_mo_vgl_device(context,
-                                       ctx->ao_basis.ao_num,
-                                       ctx->mo_basis.mo_num,
-                                       ctx->ao_basis.shell_num,
-                                       ctx->ao_basis.prim_num_per_nucleus_device,
-                                       ctx->nucleus.num,
-                                       ctx->point.coord.data_device,
-                                       ctx->nucleus.coord.data_device,
-                                       ctx->ao_basis.nucleus_index_device,
-                                       ctx->ao_basis.nucleus_shell_num_device,
-                                       ctx->ao_basis.nucleus_range_device,
-                                       ctx->ao_basis.nucleus_max_ang_mom_device,
-                                       ctx->ao_basis.shell_ang_mom_device,
-                                       ctx->ao_basis.ao_factor_device,
-                                       ctx->ao_basis.expo_per_nucleus,
-                                       ctx->ao_basis.coef_per_nucleus,
-                                       ctx->point.num,
-                                       ctx->mo_basis.coefficient_t_device,
-                                       ctx->ao_basis.ao_vgl_device,
-                                       ctx->mo_basis.mo_vgl_device,
-                                       device_id); */
-
-
     #+end_src
 
 #+CALL: write_provider_post( group="mo_basis", data="mo_vgl" )
@@ -2100,7 +2057,7 @@ qmckl_exit_code qmckl_provide_ao_mo_basis_ao_mo_vgl_device(qmckl_context context
 
 
     #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
-
+/*
     rc = qmckl_compute_ao_mo_basis_ao_mo_vgl_device(context,
                                        ctx->ao_basis.ao_num,
                                        ctx->mo_basis.mo_num,
@@ -2122,6 +2079,7 @@ qmckl_exit_code qmckl_provide_ao_mo_basis_ao_mo_vgl_device(qmckl_context context
                                        ctx->ao_basis.ao_vgl_device,
                                        ctx->mo_basis.mo_vgl_device,
                                        device_id);
+                                       */
     #+end_src
 
 #+CALL: write_provider_post( group="mo_basis", data="mo_vgl" )
