@@ -6350,13 +6350,16 @@ qmckl_exit_code qmckl_get_jastrow_dtmp_c(qmckl_context context, double* const dt
 **** Device pointers version
 
     #+begin_src c :comments org :tangle (eval h_func) :noweb yes
+    #ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_get_jastrow_cord_vect_full_device(qmckl_context context, double* const cord_vect_full, int device_id);
 qmckl_exit_code qmckl_get_jastrow_lkpm_combined_index_device(qmckl_context context, int64_t* const lkpm_combined_index, int device_id);
 qmckl_exit_code qmckl_get_jastrow_tmp_c_device(qmckl_context context, double* const tmp_c, int device_id);
 qmckl_exit_code qmckl_get_jastrow_dtmp_c_device(qmckl_context context, double* const dtmp_c, int device_id);
+    #endif
     #+end_src
 
     #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+    #ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_get_jastrow_cord_vect_full_device(qmckl_context context, double* const cord_vect_full, int device_id)
 {
   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
@@ -6481,6 +6484,7 @@ qmckl_exit_code qmckl_get_jastrow_dtmp_c_device(qmckl_context context, double* c
 
   return QMCKL_SUCCESS;
 }
+#endif
     #+end_src
 
 
@@ -6819,13 +6823,16 @@ qmckl_exit_code qmckl_provide_dtmp_c(qmckl_context context)
 **** Device pointers version
 
     #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :exports none
-qmckl_exit_code qmckl_provide_cord_vect_full_device(qmckl_context context, int device_id);
-qmckl_exit_code qmckl_provide_lkpm_combined_index_device(qmckl_context context, int device_id);
-qmckl_exit_code qmckl_provide_tmp_c_device(qmckl_context context, int device_id);
-qmckl_exit_code qmckl_provide_dtmp_c_device(qmckl_context context, int device_id);
+    #ifdef HAVE_DEVICE_POINTERS
+    qmckl_exit_code qmckl_provide_cord_vect_full_device(qmckl_context context, int device_id);
+    qmckl_exit_code qmckl_provide_lkpm_combined_index_device(qmckl_context context, int device_id);
+    qmckl_exit_code qmckl_provide_tmp_c_device(qmckl_context context, int device_id);
+    qmckl_exit_code qmckl_provide_dtmp_c_device(qmckl_context context, int device_id);
+    #endif
     #+end_src
 
     #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+    #ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_provide_cord_vect_full_device(qmckl_context context, int device_id)
 {
 
@@ -7041,6 +7048,7 @@ qmckl_exit_code qmckl_provide_dtmp_c_device(qmckl_context context, int device_id
 
   return QMCKL_SUCCESS;
 }
+#endif
     #+end_src
 
 

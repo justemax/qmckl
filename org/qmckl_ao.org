@@ -7735,13 +7735,16 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_value(qmckl_context context)
 
 #+RESULTS:
 #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :export none
+#ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context, int64_t device_id);
+#endif
 #+end_src
 
 #+CALL: write_provider_pre( group="ao_basis", data="ao_value", dimension="ctx->ao_basis.ao_num * ctx->point.num")
 
 #+RESULTS:
 #+begin_src c :comments org :tangle (eval c) :noweb yes :export none
+#ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context, int64_t device_id)
 {
 
@@ -7875,6 +7878,7 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_value_device(qmckl_context context, in
 
   return QMCKL_SUCCESS;
 }
+    #endif
 #+end_src
 
 
@@ -9382,6 +9386,7 @@ qmckl_compute_ao_vgl_gaussian_v2(
                                            double* shell_vgl,
                                            double* restrict const ao_vgl)
 {
+  printf("Call de la version v2");
 
   double *e_coord, *n_coord;
   int64_t l, il, k;
@@ -10253,13 +10258,16 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_vgl(qmckl_context context)
 **** DEVICE POITERS
 
 #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :export none
+#ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_provide_ao_basis_ao_vgl_device(qmckl_context context, int64_t const device_id);
+#endif
 #+end_src
 
 #+CALL: write_provider_pre( group="ao_basis", data="ao_vgl", dimension="ctx->ao_basis.ao_num * 5 * ctx->point.num")
 
 #+RESULTS:
 #+begin_src c :comments org :tangle (eval c) :noweb yes :export none
+#ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_provide_ao_basis_ao_vgl_device(qmckl_context context, int64_t const device_id)
 {
 
@@ -10357,6 +10365,7 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_vgl_device(qmckl_context context, int6
 
   return QMCKL_SUCCESS;
 }
+#endif
 #+end_src
 
 

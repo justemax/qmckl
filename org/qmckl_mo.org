@@ -1717,14 +1717,17 @@ qmckl_get_mo_basis_mo_vgl_inplace (qmckl_context context,
 
 
     #+begin_src c :comments org :tangle (eval h_func) :noweb yes
+    #ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code
 qmckl_get_mo_basis_mo_vgl_inplace_device (qmckl_context context,
                                    double* const mo_vgl,
                                    const int64_t size_max,
                                    const int64_t device_id);
+    #endif
     #+end_src
 
     #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
+    #ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code
 qmckl_get_mo_basis_mo_vgl_inplace_device (qmckl_context context,
                                    double* const mo_vgl_device,
@@ -1767,6 +1770,7 @@ qmckl_get_mo_basis_mo_vgl_inplace_device (qmckl_context context,
 
   return QMCKL_SUCCESS;
 }
+#endif
     #+end_src
 
 *** Provide
@@ -1877,13 +1881,16 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_vgl(qmckl_context context)
 **** Device pointers
 
 #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :export none
+#ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_provide_mo_basis_mo_vgl_device(qmckl_context context, int64_t device_id);
+#endif
 #+end_src
 
 #+CALL: write_provider_pre( group="mo_basis", data="mo_vgl", dimension="5 * ctx->mo_basis.mo_num * ctx->point.num")
 
 #+RESULTS:
 #+begin_src c :comments org :tangle (eval c) :noweb yes :export none
+#ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_provide_mo_basis_mo_vgl_device(qmckl_context context, int64_t device_id)
 {
 
@@ -1981,19 +1988,23 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_vgl_device(qmckl_context context, int6
 
   return QMCKL_SUCCESS;
 }
+#endif
 #+end_src
 
 
 
 **** Mixte AO/MOxAO
 #+begin_src c :comments org :tangle (eval h_private_func) :noweb yes :export none
+#ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_provide_ao_mo_basis_ao_mo_vgl_device(qmckl_context context, int64_t device_id);
+#endif
 #+end_src
 
 #+CALL: write_provider_pre( group="mo_basis", data="mo_vgl", dimension="5 * ctx->mo_basis.mo_num * ctx->point.num")
 
 #+RESULTS:
 #+begin_src c :comments org :tangle (eval c) :noweb yes :export none
+#ifdef HAVE_DEVICE_POINTERS
 qmckl_exit_code qmckl_provide_ao_mo_basis_ao_mo_vgl_device(qmckl_context context, int64_t device_id)
 {
 
@@ -2095,6 +2106,7 @@ qmckl_exit_code qmckl_provide_ao_mo_basis_ao_mo_vgl_device(qmckl_context context
 
   return QMCKL_SUCCESS;
 }
+#endif
 #+end_src
 
 
