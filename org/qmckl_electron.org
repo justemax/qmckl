@@ -729,7 +729,7 @@ qmckl_set_electron_coord_device(qmckl_context context,
   }
 
 
-  #pragma use_device_ptr(coord)
+  #pragma acc_kernels
   {
     printf("%p\n", coord);
   if (coord == NULL) {

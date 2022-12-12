@@ -142,6 +142,7 @@ qmckl_vector_alloc_device( qmckl_context context,
                            int device_id)
 {
   /* Should always be true by contruction */
+  printf("Coucou le debut d'alloc du vecteur\n");
   assert (size > (int64_t) 0);
 
   qmckl_vector result;
@@ -150,6 +151,7 @@ qmckl_vector_alloc_device( qmckl_context context,
   qmckl_memory_info_struct mem_info = qmckl_memory_info_struct_zero;
   mem_info.size = size * sizeof(double);
   result.data_device = qmckl_malloc_device(context, mem_info, device_id);
+
 
   if (result.data_device == NULL) {
     result.size = (int64_t) 0;
@@ -1033,6 +1035,7 @@ qmckl_vector_of_double_device(const qmckl_context context,
   // Accepts an host array an copies it in the device section of vector_out
   // (assuming the vector is already allocated)
 
+  printf("kk ici\n");
   qmckl_vector vector = *vector_out;
   /* Always true by construction */
   assert (qmckl_context_check(context) != QMCKL_NULL_CONTEXT);
@@ -1052,15 +1055,20 @@ qmckl_vector_of_double_device(const qmckl_context context,
                              "Wrong vector size");
   }
 
-  omp_target_memcpy(
+  printf("before le memcpy\n");
+  #pragma acc data deviceptr(vector.data_device)
+  {
+    printf("%p\n", vector.data_device);
+    printf("%d\n", target[0]);
+    printf("%d\n", vector.size * sizeof(double));
+  }
+
+  acc_memcpy_to_device(
     vector.data_device, target,
-    vector.size * sizeof(double),
-    0, 0,
-    device_id, omp_get_initial_device()
-  );
+    vector.size * sizeof(double));
+  printf("after le memcpy\n");
 
-
-  ,*vector_out = vector;
+  *vector_out = vector;
   return QMCKL_SUCCESS;
 
 }
@@ -1135,11 +1143,9 @@ qmckl_matrix_of_double_device(const qmckl_context context,
                              "Wrong vector size");
   }
 
-  omp_target_memcpy(
+  acc_memcpy_to_device(
     matrix.data_device, target,
-    size_max * sizeof(double),
-    0, 0,
-    device_id, omp_get_initial_device()
+    size_max * sizeof(double)
   );
 
   ,*matrix_out = matrix;
@@ -2717,12 +2723,17 @@ qmckl_transpose_device (qmckl_context context,
   int At_s0 = At.size[0];
   int At_s1 = At.size[1];
 
-  #pragma omp target is_device_ptr(A_data, At_data)
+  #pragma acc data deviceptr(A_data, At_data)
   {
-  #pragma omp parallel for collapse(2)
-  for (int64_t j=0 ; j<At_s1 ; ++j)
-    for (int64_t i=0 ; i<At_s0 ; ++i)
-      At_data[i + j*At_s0] = A_data[j + i*A_s0];
+    #pragma acc kernels
+    {
+    for (int64_t j=0 ; j<At_s1 ; ++j){
+      for (int64_t i=0 ; i<At_s0 ; ++i){
+        At_data[i + j*At_s0] = A_data[j + i*A_s0];
+      }
+    }
+    }
+    printf("fini ce truc de mort laaaa\n");
   }
 
   return QMCKL_SUCCESS;

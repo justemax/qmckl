@@ -36,6 +36,7 @@ virtual MOs present in a MO coefficient matrix.
 #include <inttypes.h>
 
 #include <omp.h>
+#include <openacc.h>
 
 #include "qmckl_blas_private_type.h"
 #+end_src
@@ -297,12 +298,9 @@ qmckl_exit_code  qmckl_set_mo_basis_coefficient_device (qmckl_context context, c
                            NULL);
   }
 
-  omp_target_memcpy(
+  acc_memcpy_to_device(
     new_array, coefficient,
-    mem_info.size,
-    0, 0,
-    device_id, omp_get_initial_device()
-  );
+    mem_info.size);
 
   ctx->mo_basis.coefficient_device = new_array;
 
@@ -425,7 +423,7 @@ qmckl_exit_code qmckl_finalize_mo_basis_device(qmckl_context context, int64_t de
   int64_t ao_num = ctx->ao_basis.ao_num;
   int64_t mo_num = ctx->mo_basis.mo_num;
 
-  #pragma omp target is_device_ptr(new_array, coefficient)
+  #pragma acc_kernel 
   {
   #pragma omp parallel for collapse(2)
   for (int64_t i=0 ; i<ao_num ; ++i) {
@@ -852,9 +850,7 @@ qmckl_get_mo_basis_mo_value_device(qmckl_context context,
                            "qmckl_get_mo_basis_mo_value",
                            "input array too small");
   }
-  omp_target_memcpy(mo_value, ctx->mo_basis.mo_value, sze * sizeof(double),
-                    0, 0,
-                    omp_get_initial_device(), device_id);
+  acc_memcpy_from_device(mo_value, ctx->mo_basis.mo_value, sze * sizeof(double));
 
   return QMCKL_SUCCESS;
 }
@@ -1636,9 +1632,7 @@ qmckl_get_mo_basis_mo_vgl_device(qmckl_context context,
                            "qmckl_get_mo_basis_mo_vgl",
                            "input array too small");
   }
-  omp_target_memcpy(mo_vgl, ctx->mo_basis.mo_vgl, sze * sizeof(double),
-                    0, 0,
-                    omp_get_initial_device(), device_id);
+  acc_memcpy_from_device(mo_vgl, ctx->mo_basis.mo_vgl, sze * sizeof(double));
 
   return QMCKL_SUCCESS;
 }
@@ -1937,7 +1931,7 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_vgl_device(qmckl_context context, int6
                                "qmckl_mo_basis_mo_vgl",
                                NULL);
       }
-      #pragma target is_device_ptr(mo_vgl_device)
+      #pragma acc_kernel
       {
       ctx->mo_basis.mo_vgl_device = mo_vgl_device;
       }
@@ -2047,7 +2041,7 @@ qmckl_exit_code qmckl_provide_ao_mo_basis_ao_mo_vgl_device(qmckl_context context
                                "qmckl_mo_basis_mo_vgl",
                                NULL);
       }
-      #pragma target data is_device_ptr(mo_vgl_device)
+      #pragma acc_kernel
       {
       ctx->mo_basis.mo_vgl_device = mo_vgl_device;
       }
@@ -2532,9 +2526,8 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
 
   int32_t * lstart_h = omp_target_alloc(32 * sizeof(int32_t), device_id);
 
-#pragma omp target is_device_ptr(lstart_h)
+#pragma acc_kernel
   {
-#pragma omp teams distribute parallel for simd
     for (int32_t l=0 ; l<32 ; ++l) {
       lstart_h[l] = l*(l+1)*(l+2)/6;
     }
@@ -2552,19 +2545,8 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
   int64_t * shell_max_ptr = omp_target_alloc(sizeof(int64_t), device_id);
   int64_t * k_ptr = omp_target_alloc(sizeof(int64_t), device_id);
 
-#pragma omp target is_device_ptr(                               \
-                                 prim_num_per_nucleus,          \
-                                 nucleus_shell_num,             \
-                                 nucleus_index,                 \
-                                 ao_index,                      \
-                                 lstart_h,                      \
-                                 shell_ang_mom,                 \
-                                 size_max_ptr,                  \
-                                 prim_max_ptr,                  \
-                                 shell_max_ptr,                 \
-                                 k_ptr                          \
-                                                            )
-  {
+#pragma acc_kernel
+{ 
 
     ,*size_max_ptr = 0;
     ,*prim_max_ptr = 0;
@@ -2590,36 +2572,28 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
   }
 
   // Affect _ptr values to host variables
-  omp_target_memcpy(
+  acc_memcpy_from_device(
                     &size_max, size_max_ptr,
-                    sizeof(int64_t),
-                    0, 0,
-                    omp_get_initial_device(), device_id
+                    sizeof(int64_t)
                     );
-  omp_target_memcpy(
+  acc_memcpy_from_device(
                     &prim_max, prim_max_ptr,
-                    sizeof(int64_t),
-                    0, 0,
-                    omp_get_initial_device(), device_id
+                    sizeof(int64_t)
                     );
-  omp_target_memcpy(
+  acc_memcpy_from_device(
                     &shell_max, shell_max_ptr,
-                    sizeof(int64_t),
-                    0, 0,
-                    omp_get_initial_device(), device_id
+                    sizeof(int64_t)
                     );
-  omp_target_memcpy(
+  acc_memcpy_from_device(
                     &k, k_ptr,
-                    sizeof(int64_t),
-                    0, 0,
-                    omp_get_initial_device(), device_id
+                    sizeof(int64_t)
                     );
 
 
-  omp_target_free(size_max_ptr, device_id);
-  omp_target_free(prim_max_ptr, device_id);
-  omp_target_free(shell_max_ptr, device_id);
-  omp_target_free(k_ptr, device_id);
+  acc_free(size_max_ptr);
+  acc_free(prim_max_ptr);
+  acc_free(shell_max_ptr);
+  acc_free(k_ptr);
 
   /* Don't compute polynomials when the radial part is zero. */
   double cutoff = -log(1.e-12);
@@ -3029,10 +3003,10 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
   }
   // End of target region
 
-    omp_target_free(ao_index, device_id);
-    omp_target_free(coef_mat, device_id);
-    omp_target_free(poly_vgl_shared, device_id);
-    omp_target_free(lstart_h, device_id);
+    acc_free(ao_index);
+    acc_free(coef_mat);
+    acc_free(poly_vgl_shared);
+    acc_free(lstart_h);
 
   //END OF AO
   // GO FOR MO

@@ -123,6 +123,7 @@ int main() {
 
 #ifdef HAVE_DEVICE_POINTERS
 #include <omp.h>
+#include <openacc.h>
 #endif
 
 

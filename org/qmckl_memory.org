@@ -24,6 +24,7 @@ optimized libraries to fine-tune the memory allocation.
 #include <assert.h>
 
 #include <omp.h>
+#include <openacc.h>
 
 #include "qmckl.h"
 #include "qmckl_memory_private_type.h"
@@ -185,9 +186,10 @@ void* qmckl_malloc_device(qmckl_context context, const qmckl_memory_info_struct 
   qmckl_context_struct* const ctx = (qmckl_context_struct*) context;
 
   /* Allocate memory and zero it */
-  void * pointer = omp_target_alloc(info.size, device_id);
+  void * pointer = acc_malloc(info.size);
   if (pointer == NULL) {
     return NULL;
+    printf("device alloc failed");
   }
 
   // TODO
@@ -363,7 +365,7 @@ qmckl_exit_code qmckl_free_device(qmckl_context context, void * const ptr, int d
                             "Pointer not found in context");
     }
 
-    omp_target_free(ptr, device_id);
+    acc_free(ptr);
 
     memset( &(ctx->memory.element[pos]), 0, sizeof(qmckl_memory_info_struct) );
     ctx->memory.n_allocated -= (size_t) 1;
@@ -524,9 +526,7 @@ qmckl_get_malloc_info_device(qmckl_context context,
     }
 
     /* Copy info */
-    omp_target_memcpy(info, &(ctx->memory.element[pos]), sizeof(qmckl_memory_info_struct),
-                      0,0,
-                      omp_get_initial_device(), device_id);
+    acc_memcpy_from_device(info, &(ctx->memory.element[pos]), sizeof(qmckl_memory_info_struct));
   }
   qmckl_unlock(context);
 
