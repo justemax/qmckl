@@ -9386,7 +9386,6 @@ qmckl_compute_ao_vgl_gaussian_v2(
                                            double* shell_vgl,
                                            double* restrict const ao_vgl)
 {
-  printf("Call de la version v2");
 
   double *e_coord, *n_coord;
   int64_t l, il, k;
@@ -9727,7 +9726,6 @@ qmckl_compute_ao_vgl_gaussian_device_pointers_v2 (
   omp_target_memcpy(shell_vgl_device, shell_vgl, point_num * 5 * shell_num * sizeof(double), 0, 0, device_id, omp_get_initial_device());
 
 
-  printf("debut de la v2 trop cool\n");
 
   lstart = omp_target_alloc(sizeof(int64_t) * 21, device_id);
 

@@ -1155,7 +1155,6 @@ qmckl_exit_code qmckl_provide_mo_basis_mo_value_device(qmckl_context context, in
 
     } else {
 
-      printf("ok avant ce call\n");
       rc = qmckl_provide_ao_basis_ao_value_device(context, device_id);
 
       if (rc != QMCKL_SUCCESS) {
@@ -1762,7 +1761,6 @@ qmckl_get_mo_basis_mo_vgl_inplace_device (qmckl_context context,
 
   ctx->mo_basis.mo_vgl_device = mo_vgl_device;
 
-  printf("before call\n");
   rc = qmckl_provide_mo_basis_mo_vgl_device(context, device_id);
   if (rc != QMCKL_SUCCESS) return rc;
 
@@ -2768,24 +2766,6 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
           break;
 
         default:
-
-          //Remplace parla fonction inline vrouuuum
-
-
-          if (size_max < size_max) return QMCKL_INVALID_ARG_9;
-
-          double* restrict const vgl1 = poly_vgl;
-          double* restrict const vgl2 = poly_vgl + size_max;
-          double* restrict const vgl3 = poly_vgl + (size_max<<1);
-          double* restrict const vgl4 = poly_vgl + size_max + (size_max<<1);
-          double* restrict const vgl5 = poly_vgl + (size_max<<2);
-
-          const double Y[3] = { e_coord[0]-n_coord[0],
-            e_coord[1]-n_coord[1],
-            e_coord[2]-n_coord[2] };
-
-          assert(size_max > nucleus_max_ang_mom[inucl]+3);
-
           for (int32_t k=0 ; k<4 ; ++k) {
             vgl2[k] = 0.0;
             vgl3[k] = 0.0;
@@ -2947,7 +2927,6 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
           double* restrict poly_vgl_5 = NULL;
 
           if (nidx > 0) {
-            //printf("k=%ld\n", k);
             const double* restrict f = ao_factor + k;
             const int64_t idx = lstart[l];
 
@@ -2976,13 +2955,7 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
             }
             switch (n) {
             case(1):
-              //printf("0\n");
-              //printf("s1=%lf\n", s1);
-              //printf("ao_vgl_1[0]=%lf\n", ao_vgl_1[0]);
-              //printf("f[0]=%lf\n", f[0]);
-              //printf("1\n");
               ao_vgl_1[0] = s1 * f[0];
-              //printf("2\n");
               ao_vgl_2[0] = s2 * f[0];
               ao_vgl_3[0] = s3 * f[0];
               ao_vgl_4[0] = s4 * f[0];
@@ -3058,7 +3031,6 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
       //mo[point][5][mo_num]
       //ao[point][5][ao_num]
       //coef[ao][mo]
-      //printf("%d", mo[404*5*point_num+])
       #pragma omp teams distribute parallel for
       for(int j=0; j < point_num; j++ ){
         for(int i = 0; i < mo_num; i++){
