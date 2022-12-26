@@ -1632,7 +1632,7 @@ qmckl_get_mo_basis_mo_vgl_device(qmckl_context context,
                            "qmckl_get_mo_basis_mo_vgl",
                            "input array too small");
   }
-  acc_memcpy_from_device(mo_vgl, ctx->mo_basis.mo_vgl, sze * sizeof(double));
+  acc_memcpy_to_device(mo_vgl, ctx->mo_basis.mo_vgl_device, sze * sizeof(double));
 
   return QMCKL_SUCCESS;
 }
@@ -2608,9 +2608,11 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
   int coef_per_nucleus_size_0 = coef_per_nucleus.size[0];
   int coef_per_nucleus_size_1 = coef_per_nucleus.size[1];
 
-#pragma omp target is_device_ptr(coef_mat, coef_per_nucleus_data)
+#pragma acc data deviceptr(coef_mat, coef_per_nucleus_data)
   {
-#pragma omp teams distribute parallel for simd
+    #pragma acc kernels
+    {
+//#pragma acc parallel loop
     for (int i=0 ; i<nucl_num ; ++i) {
       for (int j=0 ; j<shell_max; ++j) {
         for (int k=0 ; k<prim_max; ++k) {
@@ -2618,12 +2620,13 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
         }
       }
     }
+    }
   }
 
   double * expo_per_nucleus_data = expo_per_nucleus.data_device;
   int expo_per_nucleus_size_0 = expo_per_nucleus.size[0];
-#pragma omp target                              \
-  is_device_ptr(                                \
+#pragma acc data                              \
+  deviceptr(                                \
                 coef_mat,                       \
                 ao_index,                       \
                 poly_vgl_shared,                \
@@ -2640,8 +2643,9 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
                 ao_vgl                          \
                 )
   {
-
-#pragma omp teams distribute parallel for simd
+#pragma acc kernels
+{
+//#pragma acc parallel loop
     for (int64_t ipoint=0 ; ipoint < point_num ; ++ipoint) {
 
       double * poly_vgl = &(poly_vgl_shared[ipoint*5*size_max]);
@@ -2734,7 +2738,6 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
           //Remplace parla fonction inline vrouuuum
 
 
-          if (size_max < size_max) return QMCKL_INVALID_ARG_9;
 
           double* restrict const vgl1 = poly_vgl;
           double* restrict const vgl2 = poly_vgl + size_max;
@@ -2999,7 +3002,7 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
         }
       }
     }
-
+  }
   }
   // End of target region
 
@@ -3012,16 +3015,16 @@ qmckl_compute_ao_mo_basis_ao_mo_vgl_device (const qmckl_context context,
   // GO FOR MO
 
 
-#pragma use_device_ptr(ao_vgl, mo_vgl, coefficient_t)
+#pragma acc data deviceptr(ao_vgl, mo_vgl, coefficient_t)
   {
     //Set Mo to 0
-#pragma omp target
+#pragma acc kernels
     {
       //mo[point][5][mo_num]
       //ao[point][5][ao_num]
       //coef[ao][mo]
       //printf("%d", mo[404*5*point_num+])
-      #pragma omp teams distribute parallel for
+      //#pragma acc parallel loop
       for(int j=0; j < point_num; j++ ){
         for(int i = 0; i < mo_num; i++){
           mo_vgl[j * 5 * mo_num + 0 * mo_num + i] = 0;

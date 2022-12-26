@@ -3522,7 +3522,6 @@ qmckl_exit_code qmckl_finalize_basis_device(qmckl_context context, int device_id
       for (int64_t iprim=shell_prim_index[ishell] ;
            iprim < shell_prim_index[ishell]+shell_prim_num[ishell];
            ++iprim) {
-            printf("%d\n", iprim);
           coefficient_normalized[iprim] =
           coefficient[iprim] * prim_factor[iprim] *
           shell_factor[ishell];
@@ -3598,8 +3597,8 @@ qmckl_exit_code qmckl_finalize_basis_device(qmckl_context context, int device_id
 
       int nucleus_num = ctx->nucleus.num;
 
-      #pragma omp target \
-      is_device_ptr(     \
+      #pragma acc data \
+      deviceptr(     \
       nucleus_range,     \
       nucleus_index,     \
       nucleus_shell_num, \
@@ -5429,7 +5428,6 @@ qmckl_exit_code qmckl_provide_ao_basis_shell_vgl(qmckl_context context)
     ctx->ao_basis.shell_vgl_date = ctx->date;
   }
 
-  printf("fin du get shell_vgl\n");
   return QMCKL_SUCCESS;
 }
 #+end_src
@@ -5443,7 +5441,6 @@ qmckl_exit_code qmckl_provide_ao_basis_shell_vgl_device(qmckl_context context, i
 qmckl_exit_code qmckl_provide_ao_basis_shell_vgl_device(qmckl_context context, int64_t device_id)
 {
 
-  printf("Donne le shell vgl device\n");
   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
     return qmckl_failwith( context,
                            QMCKL_INVALID_CONTEXT,
@@ -5498,7 +5495,6 @@ qmckl_exit_code qmckl_provide_ao_basis_shell_vgl_device(qmckl_context context, i
                                                      ctx->ao_basis.exponent_device,
                                                      ctx->ao_basis.coefficient_normalized_device,
                                                      ctx->ao_basis.shell_vgl_device);
-      printf("fini la fonction lo\n");
       
       
       /*
@@ -5525,7 +5521,6 @@ qmckl_exit_code qmckl_provide_ao_basis_shell_vgl_device(qmckl_context context, i
                              "compute_ao_basis_shell_vgl",
                              "Not yet implemented");
     }
-    printf("fini la condition\n");
     if (rc != QMCKL_SUCCESS) {
       return rc;
     }
@@ -5533,10 +5528,7 @@ qmckl_exit_code qmckl_provide_ao_basis_shell_vgl_device(qmckl_context context, i
     ctx->ao_basis.shell_vgl_date = ctx->date;
   }
 
-#pragma acc data deviceptr(ctx->ao_basis.shell_vgl_device)
-{
-  printf("fin du get shell_vgl %p\n", ctx->ao_basis.shell_vgl_device);
-}
+
   return QMCKL_SUCCESS;
 }
 #+end_src
@@ -9895,6 +9887,7 @@ qmckl_compute_ao_vgl_gaussian_device_pointers_v2 (
                                            double* restrict const ao_vgl,
                                            int device_id )
 {
+  printf("device 2.0\n");
 
   double *e_coord, *n_coord;
   int64_t n_poly;
@@ -9910,12 +9903,8 @@ qmckl_compute_ao_vgl_gaussian_device_pointers_v2 (
   double* poly_vgl;
   int64_t* powers;
   int64_t* ao_index;
+;
 
-
-#pragma acc data deviceptr(shell_vgl_device)
-{
-  printf("%p\n", shell_vgl_device);
-}
   
  
   qmckl_exit_code rc;
@@ -9923,7 +9912,6 @@ qmckl_compute_ao_vgl_gaussian_device_pointers_v2 (
 
 
 
-  printf("debut de la v2 trop cool\n");
 
   lstart = acc_malloc(sizeof(int64_t) * 21);
 
@@ -10465,7 +10453,6 @@ qmckl_exit_code qmckl_provide_ao_basis_ao_vgl_device(qmckl_context context, int6
 qmckl_exit_code qmckl_provide_ao_basis_ao_vgl_device(qmckl_context context, int64_t const device_id)
 {
 
-printf("Je passe la???\n");
   qmckl_exit_code rc = QMCKL_SUCCESS;
 
   if (qmckl_context_check(context) == QMCKL_NULL_CONTEXT) {
@@ -10526,7 +10513,6 @@ printf("Je passe la???\n");
 
      #+begin_src c :comments org :tangle (eval c) :noweb yes  :exports none
     qmckl_provide_ao_basis_shell_vgl_device(context, device_id);
-    printf("combien: %p\n", ctx->ao_basis.shell_vgl);
     if (ctx->ao_basis.type == 'G') {
       rc = qmckl_compute_ao_vgl_gaussian_device_pointers_v2(context,
                                                          ctx->ao_basis.ao_num,
@@ -10542,7 +10528,7 @@ printf("Je passe la???\n");
                                                          ctx->ao_basis.nucleus_max_ang_mom_device,
                                                          ctx->ao_basis.shell_ang_mom_device,
                                                          ctx->ao_basis.ao_factor_device,
-                                                         ctx->ao_basis.shell_vgl,
+                                                         ctx->ao_basis.shell_vgl_device,
                                                          ctx->ao_basis.ao_vgl_device,
                                                          device_id);
 
@@ -10856,7 +10842,6 @@ qmckl_exit_code qmckl_provide_ao_vgl_device(qmckl_context context, int device_id
     }
 
     if (ctx->ao_basis.type == 'G') {
-      printf("coucou\n");
       qmckl_provide_ao_basis_shell_vgl_device(context, device_id);
       rc = qmckl_compute_ao_vgl_gaussian_device_pointers_v2(context,
                                                          ctx->ao_basis.ao_num,
