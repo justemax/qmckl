@@ -701,6 +701,7 @@ qmckl_set_ao_basis_nucleus_index_device (qmckl_context context,
 
   ctx->ao_basis.nucleus_index_device = new_array;
 
+printf("Coucou fini loooo\n");
   <<post2_device>>
       }
 #endif
@@ -1368,11 +1369,9 @@ qmckl_set_ao_basis_shell_factor_device (qmckl_context context,
                            NULL);
   }
 
-  omp_target_memcpy(
+  acc_memcpy_to_device(
     new_array, shell_factor,
-    mem_info.size,
-    0, 0,
-    device_id, omp_get_initial_device()
+    mem_info.size
   );
 
   ctx->ao_basis.shell_factor_device = new_array;
@@ -1504,11 +1503,9 @@ qmckl_set_ao_basis_exponent_device (qmckl_context context,
                            NULL);
   }
 
-  omp_target_memcpy(
+  acc_memcpy_to_device(
     new_array, exponent,
-    mem_info.size,
-    0, 0,
-    device_id, omp_get_initial_device()
+    mem_info.size
   );
 
   ctx->ao_basis.exponent_device = new_array;
@@ -1640,11 +1637,9 @@ qmckl_set_ao_basis_coefficient_device (qmckl_context context,
                            NULL);
   }
 
-  omp_target_memcpy(
+  acc_memcpy_to_device(
     new_array, coefficient,
-    mem_info.size,
-    0, 0,
-    device_id, omp_get_initial_device()
+    mem_info.size
   );
 
   ctx->ao_basis.coefficient_device = new_array;
@@ -1776,11 +1771,9 @@ qmckl_set_ao_basis_prim_factor_device (qmckl_context context,
                            NULL);
   }
 
-  omp_target_memcpy(
+  acc_memcpy_to_device(
     new_array, prim_factor,
-    mem_info.size,
-    0, 0,
-    device_id, omp_get_initial_device()
+    mem_info.size
   );
 
   ctx->ao_basis.prim_factor_device = new_array;
@@ -1912,11 +1905,9 @@ qmckl_set_ao_basis_ao_factor_device (qmckl_context context,
                            NULL);
   }
 
-  omp_target_memcpy(
+  acc_memcpy_to_device(
     new_array, ao_factor,
-    mem_info.size,
-    0, 0,
-    device_id, omp_get_initial_device()
+    mem_info.size
   );
 
   ctx->ao_basis.ao_factor_device = new_array;
@@ -3530,6 +3521,7 @@ qmckl_exit_code qmckl_finalize_basis_device(qmckl_context context, int device_id
     }
     }
   }
+  printf("3526\n");
 
   /* Find max angular momentum on each nucleus */
   {
@@ -3551,6 +3543,7 @@ qmckl_exit_code qmckl_finalize_basis_device(qmckl_context context, int device_id
     int64_t * nucleus_shell_num = ctx->ao_basis.nucleus_shell_num_device;
     int32_t * shell_ang_mom = ctx->ao_basis.shell_ang_mom_device;
 
+    printf("3548\n");
     #pragma acc data deviceptr(nucleus_max_ang_mom, nucleus_index, nucleus_shell_num, shell_ang_mom)
     {
     #pragma acc kernels
@@ -3597,6 +3590,7 @@ qmckl_exit_code qmckl_finalize_basis_device(qmckl_context context, int device_id
 
       int nucleus_num = ctx->nucleus.num;
 
+      printf("3595\n");
       #pragma acc data \
       deviceptr(     \
       nucleus_range,     \
@@ -3607,6 +3601,8 @@ qmckl_exit_code qmckl_finalize_basis_device(qmckl_context context, int device_id
       exponent           \
       )
       {
+        #pragma acc kernels
+        {
       for (int64_t inucl=0 ; inucl < nucleus_num ; ++inucl) {
         nucleus_range[inucl] = 0.;
         for (int64_t ishell=nucleus_index[inucl]  ;
@@ -3623,9 +3619,11 @@ qmckl_exit_code qmckl_finalize_basis_device(qmckl_context context, int device_id
         }
       }
       }
+      }
     }
   }
 
+printf("Avant call hpc device\n");
   // In principle, we should always have HAVE_HPC
 #ifdef HAVE_HPC
   rc = qmckl_finalize_basis_hpc_device(context, device_id);
@@ -3849,9 +3847,12 @@ qmckl_exit_code qmckl_finalize_basis_hpc_device (qmckl_context context, int devi
   int64_t * shell_max_ptr = &shell_max;
   int64_t * prim_max_ptr  = &prim_max;
 
-  #pragma omp target map(tofrom: shell_max_ptr[:1], prim_max_ptr[:1])\
-  is_device_ptr(nucleus_shell_num, nucleus_index, shell_prim_num, prim_num_per_nucleus)
+  printf("3850\n");
+  #pragma acc data copyin(shell_max_ptr[:1], prim_max_ptr[:1])\
+  deviceptr(nucleus_shell_num, nucleus_index, shell_prim_num, prim_num_per_nucleus)
   {
+    #pragma acc kernels
+    {
 
   for (int inucl=0 ; inucl < nucl_num ; ++inucl) {
     shell_max_ptr[0] = nucleus_shell_num[inucl] > shell_max_ptr[0] ?
@@ -3867,6 +3868,7 @@ qmckl_exit_code qmckl_finalize_basis_hpc_device (qmckl_context context, int devi
       prim_num : prim_max_ptr[0];
     prim_num_per_nucleus[inucl] = prim_num;
   }
+    }
 
   }
 
